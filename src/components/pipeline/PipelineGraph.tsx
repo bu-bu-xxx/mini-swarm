@@ -28,7 +28,7 @@ export default function PipelineGraph() {
     if (!currentDesign) return [];
     const { nodes: agentNodes, parallelGroups } = currentDesign.topology;
 
-    return agentNodes.map((agent, _index) => {
+    return agentNodes.map((agent) => {
       // Find which level this agent is in
       let level = 0;
       let posInLevel = 0;

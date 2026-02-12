@@ -1,73 +1,71 @@
-# React + TypeScript + Vite
+# 🐝 AutoSwarm Designer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Automated Agent Swarm Design & Visualization System**
 
-Currently, two official plugins are available:
+A browser-based tool that simplifies multi-agent system design to natural language interaction. Describe a task, and the system automatically decomposes it, designs an execution pipeline, orchestrates agent collaboration, and visualizes the entire workflow in real-time.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Zero-barrier Automation**: Natural language input generates professional multi-agent collaboration plans
+- **WYSIWYG Pipeline**: Auto-generated pipeline with real-time visualization via React Flow
+- **Complete Local Privacy**: API Key stored in browser only, all computation done locally
+- **MCP Tool Integration**: Connect external tool ecosystems via MCP protocol (Streamable HTTP)
+- **Parallel Execution**: Automatic identification of parallelizable tasks for optimized execution
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend**: React 18 + TypeScript + TailwindCSS
+- **Visualization**: React Flow (@xyflow/react)
+- **State Management**: Zustand + Immer
+- **LLM Access**: OpenRouter API (supports Claude, GPT, Gemini, DeepSeek)
+- **Build Tool**: Vite
+- **Storage**: LocalStorage + OPFS + IndexedDB (all browser-local)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Install dependencies
+npm install
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Start development server
+npm run dev
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Build for production
+npm run build
+
+# Lint
+npm run lint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Usage
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. **Setup**: Enter your [OpenRouter API Key](https://openrouter.ai/keys) and optionally add MCP servers
+2. **Design**: Describe your task in natural language and click "Design Swarm"
+3. **Review**: Inspect the generated pipeline, todo list, and agent configurations
+4. **Execute**: Click "Start" to run the pipeline and monitor progress in real-time
+5. **Export**: Download results or save the swarm design as JSON for reuse
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Architecture
+
 ```
+src/
+├── types/          # TypeScript interfaces and data models
+├── core/
+│   ├── llm/        # OpenRouter LLM client (streaming support)
+│   ├── mcp/        # MCP Client Manager (Streamable HTTP)
+│   ├── designer/   # Swarm Designer (LLM-driven auto generation)
+│   └── engine/     # Pipeline execution engine (DAG scheduler)
+├── store/          # Zustand state management
+├── components/
+│   ├── setup/      # Onboarding / API key configuration
+│   ├── workspace/  # Main 3-column workspace layout
+│   ├── pipeline/   # React Flow graph, agent nodes, agent drawer
+│   ├── todo/       # Todo list panel
+│   ├── logs/       # Real-time log viewer
+│   └── settings/   # Settings drawer
+└── utils/          # Utility functions
+```
+
+## License
+
+MIT
