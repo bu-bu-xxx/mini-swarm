@@ -1,0 +1,29 @@
+name: OpenRouter Integration Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [copilot/develop-project-based-on-design]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run OpenRouter Integration Tests
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: node tests/openrouter.integration.test.mjs
