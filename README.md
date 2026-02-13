@@ -1,6 +1,10 @@
 # 🐝 AutoSwarm Designer
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 **Automated Agent Swarm Design & Visualization System**
+
+🌐 **Live Demo**: [https://bu-bu-xxx.github.io/mini-swarm/](https://bu-bu-xxx.github.io/mini-swarm/)
 
 A browser-based tool that simplifies multi-agent system design to natural language interaction. Describe a task, and the system automatically decomposes it, designs an execution pipeline, orchestrates agent collaboration, and visualizes the entire workflow in real-time.
 
