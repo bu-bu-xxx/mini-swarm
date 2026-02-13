@@ -19,7 +19,7 @@ A browser-based tool that simplifies multi-agent system design to natural langua
 - **State Management**: Zustand + Immer
 - **LLM Access**: OpenRouter API (supports Claude, GPT, Gemini, DeepSeek)
 - **Build Tool**: Vite
-- **Storage**: LocalStorage + OPFS + IndexedDB (all browser-local)
+- **Storage**: LocalStorage (browser-local)
 
 ## Getting Started
 

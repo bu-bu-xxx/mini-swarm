@@ -41,3 +41,28 @@ export async function importDesignFromJSON(): Promise<unknown> {
     input.click();
   });
 }
+
+import type { SwarmDesign } from '../types';
+
+interface SwarmDesignLike {
+  id: string;
+  taskDescription: string;
+  topology: {
+    nodes: { id: string; name: string }[];
+    edges: { id: string; source: string; target: string }[];
+    parallelGroups: string[][];
+  };
+  todos: { id: string; description: string }[];
+  [key: string]: unknown;
+}
+
+export function isValidSwarmDesign(data: unknown): data is SwarmDesign {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as SwarmDesignLike;
+  if (typeof d.id !== 'string' || typeof d.taskDescription !== 'string') return false;
+  if (!d.topology || typeof d.topology !== 'object') return false;
+  const topo = d.topology;
+  if (!Array.isArray(topo.nodes) || !Array.isArray(topo.edges) || !Array.isArray(topo.parallelGroups)) return false;
+  if (!Array.isArray(d.todos)) return false;
+  return true;
+}

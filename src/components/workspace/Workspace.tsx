@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store';
-import { exportDesignAsJSON, importDesignFromJSON } from '../../utils';
+import { exportDesignAsJSON, importDesignFromJSON, isValidSwarmDesign } from '../../utils';
 import TaskInput from './TaskInput';
 import ExecutionControls from './ExecutionControls';
 import ContextViewer from './ContextViewer';
@@ -8,7 +8,6 @@ import AgentDrawer from '../pipeline/AgentDrawer';
 import TodoList from '../todo/TodoList';
 import LogViewer from '../logs/LogViewer';
 import SettingsDrawer from '../settings/SettingsDrawer';
-import type { SwarmDesign } from '../../types';
 
 export default function Workspace() {
   const {
@@ -31,8 +30,8 @@ export default function Workspace() {
 
   const handleImport = async () => {
     try {
-      const data = await importDesignFromJSON() as SwarmDesign;
-      if (data && data.topology) {
+      const data = await importDesignFromJSON();
+      if (isValidSwarmDesign(data)) {
         setCurrentDesign(data);
         initNodeStates(data.topology.nodes.map((n) => n.id));
       }

@@ -18,7 +18,13 @@ export default function AgentDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedNodeId(null)} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedNodeId(null)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setSelectedNodeId(null); }}
+      />
 
       <div className="relative ml-auto w-[420px] bg-slate-800 border-l border-slate-700 h-full overflow-y-auto">
         {/* Header */}

@@ -2,34 +2,54 @@ import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
 import { AVAILABLE_MODELS } from '../../core/llm/openrouter';
+import { mcpManager } from '../../core/mcp/client';
 
 export default function SettingsDrawer() {
-  const { settings, settingsOpen, setSettingsOpen, setApiKey, setSelectedModel, addMCPServer, removeMCPServer } = useAppStore();
+  const { settings, settingsOpen, setSettingsOpen, setApiKey, setSelectedModel, addMCPServer, removeMCPServer, updateMCPServer } = useAppStore();
   const [mcpName, setMcpName] = useState('');
   const [mcpUrl, setMcpUrl] = useState('');
   const [mcpToken, setMcpToken] = useState('');
+  const [connecting, setConnecting] = useState(false);
 
   if (!settingsOpen) return null;
 
-  const handleAddMCP = () => {
+  const handleAddMCP = async () => {
     if (!mcpName.trim() || !mcpUrl.trim()) return;
-    addMCPServer({
+    const server = {
       id: uuidv4(),
       name: mcpName.trim(),
       url: mcpUrl.trim(),
       token: mcpToken.trim() || undefined,
       connected: false,
-      tools: [],
-    });
+      tools: [] as { name: string; description: string; inputSchema: Record<string, unknown>; serverId: string }[],
+    };
+    addMCPServer(server);
     setMcpName('');
     setMcpUrl('');
     setMcpToken('');
+
+    // Attempt to connect
+    setConnecting(true);
+    try {
+      const tools = await mcpManager.connect(server);
+      updateMCPServer(server.id, { connected: true, tools });
+    } catch {
+      // Connection failed, server remains disconnected
+    } finally {
+      setConnecting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={() => setSettingsOpen(false)} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        role="button"
+        tabIndex={0}
+        onClick={() => setSettingsOpen(false)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setSettingsOpen(false); }}
+      />
 
       {/* Drawer */}
       <div className="relative ml-auto w-96 bg-slate-800 border-l border-slate-700 h-full overflow-y-auto p-6">
@@ -123,10 +143,10 @@ export default function SettingsDrawer() {
             />
             <button
               onClick={handleAddMCP}
-              disabled={!mcpName.trim() || !mcpUrl.trim()}
+              disabled={!mcpName.trim() || !mcpUrl.trim() || connecting}
               className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded text-sm transition"
             >
-              Add Server
+              {connecting ? 'Connecting...' : 'Add Server'}
             </button>
           </div>
         </section>

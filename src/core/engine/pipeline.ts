@@ -61,6 +61,7 @@ export class PipelineEngine {
 
   async executeNode(node: AgentNode, design: SwarmDesign): Promise<void> {
     if (this.aborted) return;
+    await this.checkPause();
 
     this.callbacks.onNodeStatusChange(node.id, 'running');
     this.log(node, 'info', `Starting agent: ${node.name} (${node.role})`);
@@ -71,6 +72,9 @@ export class PipelineEngine {
 
       // Build the agent prompt
       const systemPrompt = this.buildAgentPrompt(node, design);
+
+      if (this.aborted) return;
+      await this.checkPause();
 
       this.log(node, 'info', 'Calling LLM...');
 
