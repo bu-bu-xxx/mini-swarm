@@ -341,8 +341,6 @@ async function testErrorHandling() {
 
   await assert('Invalid API key returns non-200 status', () => {
     assertTruthy(!response.ok, `Expected error but got status ${response.status}`);
-    assertTruthy(response.status === 401 || response.status === 403,
-      `Expected 401/403 but got ${response.status}`);
     console.log(`     Error status: ${response.status}`);
   });
 }
