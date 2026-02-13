@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
 import { AVAILABLE_MODELS } from '../../core/llm/openrouter';
 import { mcpManager } from '../../core/mcp/client';
+import type { MCPServerConfig } from '../../types';
 
 export default function SetupPage() {
   const { settings, setApiKey, setSelectedModel, addMCPServer, removeMCPServer, updateMCPServer, setSetupComplete, setView } = useAppStore();
@@ -13,13 +14,13 @@ export default function SetupPage() {
 
   const handleAddMCP = async () => {
     if (!mcpName.trim() || !mcpUrl.trim()) return;
-    const server = {
+    const server: MCPServerConfig = {
       id: uuidv4(),
       name: mcpName.trim(),
       url: mcpUrl.trim(),
       token: mcpToken.trim() || undefined,
       connected: false,
-      tools: [] as { name: string; description: string; inputSchema: Record<string, unknown>; serverId: string }[],
+      tools: [],
     };
     addMCPServer(server);
     setMcpName('');

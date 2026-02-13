@@ -24,7 +24,7 @@ export default function ContextViewer() {
               <div className="mt-1 ml-4 p-2 bg-slate-900 border border-slate-700 rounded text-xs text-slate-400 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
                 {typeof entry.value === 'string'
                   ? entry.value.slice(0, 500)
-                  : JSON.stringify(entry.value, null, 2, ).slice(0, 500)}
+                  : JSON.stringify(entry.value, null, 2).slice(0, 500)}
                 {((typeof entry.value === 'string' ? entry.value.length : JSON.stringify(entry.value).length) > 500) && (
                   <span className="text-slate-600"> ...truncated</span>
                 )}
