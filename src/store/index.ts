@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { v4 as uuidv4 } from 'uuid';
 import type {
   AppSettings,
   AppView,
   SwarmDesign,
+  AgentNode,
+  PipelineEdge,
   NodeExecutionState,
   LogEntry,
   ExecutionStatus,
@@ -34,6 +37,14 @@ interface AppState {
   designProgress: string;
   setDesignProgress: (msg: string) => void;
 
+  // Design Editing
+  addAgent: (agent: AgentNode) => void;
+  removeAgent: (agentId: string) => void;
+  updateAgent: (agentId: string, updates: Partial<AgentNode>) => void;
+  addEdge: (edge: PipelineEdge) => void;
+  removeEdge: (edgeId: string) => void;
+  newAgentId: () => string;
+
   // Execution
   executionStatus: ExecutionStatus;
   setExecutionStatus: (status: ExecutionStatus) => void;
@@ -56,6 +67,8 @@ interface AppState {
   setSettingsOpen: (open: boolean) => void;
   selectedNodeId: string | null;
   setSelectedNodeId: (id: string | null) => void;
+  selectedEdgeId: string | null;
+  setSelectedEdgeId: (id: string | null) => void;
   leftPanelCollapsed: boolean;
   setLeftPanelCollapsed: (collapsed: boolean) => void;
   rightPanelCollapsed: boolean;
@@ -127,6 +140,50 @@ export const useAppStore = create<AppState>()(
     designProgress: '',
     setDesignProgress: (msg) => set((s) => { s.designProgress = msg; }),
 
+    // Design Editing
+    newAgentId: () => `agent-${uuidv4().slice(0, 8)}`,
+    addAgent: (agent) => set((s) => {
+      if (!s.currentDesign) return;
+      s.currentDesign.topology.nodes.push(agent);
+      // New agents go into their own parallel group until connected
+      s.currentDesign.topology.parallelGroups.push([agent.id]);
+      // Init node state
+      s.nodeStates[agent.id] = { nodeId: agent.id, status: 'idle', logs: [] };
+    }),
+    removeAgent: (agentId) => set((s) => {
+      if (!s.currentDesign) return;
+      s.currentDesign.topology.nodes = s.currentDesign.topology.nodes.filter((n) => n.id !== agentId);
+      s.currentDesign.topology.edges = s.currentDesign.topology.edges.filter(
+        (e) => e.source !== agentId && e.target !== agentId
+      );
+      s.currentDesign.topology.parallelGroups = s.currentDesign.topology.parallelGroups
+        .map((g) => g.filter((id) => id !== agentId))
+        .filter((g) => g.length > 0);
+      delete s.nodeStates[agentId];
+      if (s.selectedNodeId === agentId) s.selectedNodeId = null;
+    }),
+    updateAgent: (agentId, updates) => set((s) => {
+      if (!s.currentDesign) return;
+      const idx = s.currentDesign.topology.nodes.findIndex((n) => n.id === agentId);
+      if (idx !== -1) {
+        Object.assign(s.currentDesign.topology.nodes[idx], updates);
+      }
+    }),
+    addEdge: (edge) => set((s) => {
+      if (!s.currentDesign) return;
+      // Avoid duplicate edges
+      const exists = s.currentDesign.topology.edges.some(
+        (e) => e.source === edge.source && e.target === edge.target
+      );
+      if (!exists) {
+        s.currentDesign.topology.edges.push(edge);
+      }
+    }),
+    removeEdge: (edgeId) => set((s) => {
+      if (!s.currentDesign) return;
+      s.currentDesign.topology.edges = s.currentDesign.topology.edges.filter((e) => e.id !== edgeId);
+    }),
+
     // Execution
     executionStatus: 'idle',
     setExecutionStatus: (status) => set((s) => { s.executionStatus = status; }),
@@ -162,6 +219,8 @@ export const useAppStore = create<AppState>()(
     setSettingsOpen: (open) => set((s) => { s.settingsOpen = open; }),
     selectedNodeId: null,
     setSelectedNodeId: (id) => set((s) => { s.selectedNodeId = id; }),
+    selectedEdgeId: null,
+    setSelectedEdgeId: (id) => set((s) => { s.selectedEdgeId = id; }),
     leftPanelCollapsed: false,
     setLeftPanelCollapsed: (collapsed) => set((s) => { s.leftPanelCollapsed = collapsed; }),
     rightPanelCollapsed: false,
