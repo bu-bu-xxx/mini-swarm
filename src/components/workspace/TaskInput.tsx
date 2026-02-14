@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useAppStore } from '../../store';
-import { designSwarm } from '../../core/designer/designer';
+import { designSwarm, refineSwarm } from '../../core/designer/designer';
 import { mcpManager } from '../../core/mcp/client';
 import { AVAILABLE_MODELS } from '../../core/llm/openrouter';
 
 export default function TaskInput() {
   const [task, setTask] = useState('');
+  const [refinePrompt, setRefinePrompt] = useState('');
   const {
     settings,
     setSelectedModel,
@@ -13,6 +14,7 @@ export default function TaskInput() {
     setIsDesigning,
     designProgress,
     setDesignProgress,
+    currentDesign,
     setCurrentDesign,
     clearLogs,
     clearContext,
@@ -48,6 +50,33 @@ export default function TaskInput() {
     }
   }, [task, settings.apiKey, settings.selectedModel, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
 
+  const handleRefine = useCallback(async () => {
+    if (!refinePrompt.trim() || !settings.apiKey || !currentDesign) return;
+
+    setIsDesigning(true);
+    setDesignProgress('Refining pipeline...');
+
+    try {
+      const design = await refineSwarm({
+        currentDesign,
+        refinementPrompt: refinePrompt.trim(),
+        apiKey: settings.apiKey,
+        model: settings.selectedModel,
+        availableTools: mcpManager.getAvailableTools(),
+        onProgress: (msg) => setDesignProgress(msg),
+      });
+
+      setCurrentDesign(design);
+      initNodeStates(design.topology.nodes.map((n) => n.id));
+      setRefinePrompt('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setDesignProgress(`Error: ${message}`);
+    } finally {
+      setIsDesigning(false);
+    }
+  }, [refinePrompt, settings.apiKey, settings.selectedModel, currentDesign, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
+
   return (
     <div className="p-3 space-y-3">
       <h3 className="text-sm font-semibold text-slate-400 uppercase">Task</h3>
@@ -80,6 +109,27 @@ export default function TaskInput() {
       >
         {isDesigning ? '🔄 Designing...' : '🐝 Design Swarm'}
       </button>
+
+      {/* Refine Pipeline Section */}
+      {currentDesign && !isDesigning && (
+        <div className="pt-2 border-t border-slate-700 space-y-2">
+          <h3 className="text-sm font-semibold text-slate-400 uppercase">Refine Pipeline</h3>
+          <textarea
+            value={refinePrompt}
+            onChange={(e) => setRefinePrompt(e.target.value)}
+            placeholder="Describe changes... e.g., 'Add a testing agent' or 'Remove the reviewer and merge its tasks with the coder'"
+            className="w-full h-16 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+            disabled={isDesigning}
+          />
+          <button
+            onClick={handleRefine}
+            disabled={!refinePrompt.trim() || !settings.apiKey || isDesigning}
+            className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
+          >
+            ✨ Refine Pipeline
+          </button>
+        </div>
+      )}
 
       {isDesigning && designProgress && (
         <div className="text-xs text-purple-400 animate-pulse">{designProgress}</div>
