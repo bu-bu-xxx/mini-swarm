@@ -67,6 +67,8 @@ interface AppState {
   setSettingsOpen: (open: boolean) => void;
   selectedNodeId: string | null;
   setSelectedNodeId: (id: string | null) => void;
+  selectedEdgeId: string | null;
+  setSelectedEdgeId: (id: string | null) => void;
   leftPanelCollapsed: boolean;
   setLeftPanelCollapsed: (collapsed: boolean) => void;
   rightPanelCollapsed: boolean;
@@ -217,6 +219,8 @@ export const useAppStore = create<AppState>()(
     setSettingsOpen: (open) => set((s) => { s.settingsOpen = open; }),
     selectedNodeId: null,
     setSelectedNodeId: (id) => set((s) => { s.selectedNodeId = id; }),
+    selectedEdgeId: null,
+    setSelectedEdgeId: (id) => set((s) => { s.selectedEdgeId = id; }),
     leftPanelCollapsed: false,
     setLeftPanelCollapsed: (collapsed) => set((s) => { s.leftPanelCollapsed = collapsed; }),
     rightPanelCollapsed: false,

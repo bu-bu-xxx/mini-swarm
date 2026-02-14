@@ -5,6 +5,7 @@ import ExecutionControls from './ExecutionControls';
 import ContextViewer from './ContextViewer';
 import PipelineGraph from '../pipeline/PipelineGraph';
 import AgentDrawer from '../pipeline/AgentDrawer';
+import EdgeDrawer from '../pipeline/EdgeDrawer';
 import TodoList from '../todo/TodoList';
 import LogViewer from '../logs/LogViewer';
 import SettingsDrawer from '../settings/SettingsDrawer';
@@ -132,6 +133,7 @@ export default function Workspace() {
       {/* Overlays */}
       <SettingsDrawer />
       <AgentDrawer />
+      <EdgeDrawer />
     </div>
   );
 }

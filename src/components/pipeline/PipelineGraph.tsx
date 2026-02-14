@@ -25,6 +25,8 @@ export default function PipelineGraph() {
   const currentDesign = useAppStore((s) => s.currentDesign);
   const nodeStates = useAppStore((s) => s.nodeStates);
   const setSelectedNodeId = useAppStore((s) => s.setSelectedNodeId);
+  const selectedEdgeId = useAppStore((s) => s.selectedEdgeId);
+  const setSelectedEdgeId = useAppStore((s) => s.setSelectedEdgeId);
   const addEdgeToStore = useAppStore((s) => s.addEdge);
   const removeEdgeFromStore = useAppStore((s) => s.removeEdge);
   const addAgentToStore = useAppStore((s) => s.addAgent);
@@ -70,16 +72,24 @@ export default function PipelineGraph() {
 
   const initialEdges = useMemo(() => {
     if (!currentDesign) return [] as Edge[];
-    return currentDesign.topology.edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      label: e.label,
-      animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#8b5cf6' },
-    }) satisfies Edge);
-  }, [currentDesign]);
+    return currentDesign.topology.edges.map((e) => {
+      const isSelected = e.id === selectedEdgeId;
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        animated: true,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: {
+          stroke: isSelected ? '#f59e0b' : '#8b5cf6',
+          strokeWidth: isSelected ? 3 : 1,
+          filter: isSelected ? 'drop-shadow(0 0 6px #f59e0b)' : undefined,
+        },
+        className: isSelected ? 'selected-edge' : undefined,
+      } satisfies Edge;
+    });
+  }, [currentDesign, selectedEdgeId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -91,11 +101,18 @@ export default function PipelineGraph() {
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNodeId(node.id);
-  }, [setSelectedNodeId]);
+    setSelectedEdgeId(null);
+  }, [setSelectedNodeId, setSelectedEdgeId]);
+
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(edge.id);
+    setSelectedNodeId(null);
+  }, [setSelectedEdgeId, setSelectedNodeId]);
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
-  }, [setSelectedNodeId]);
+    setSelectedEdgeId(null);
+  }, [setSelectedNodeId, setSelectedEdgeId]);
 
   // Handle new edge connection
   const onConnect = useCallback((connection: Connection) => {
@@ -119,7 +136,8 @@ export default function PipelineGraph() {
     for (const edge of deletedEdges) {
       removeEdgeFromStore(edge.id);
     }
-  }, [removeEdgeFromStore]);
+    setSelectedEdgeId(null);
+  }, [removeEdgeFromStore, setSelectedEdgeId]);
 
   // Handle node deletion (via keyboard)
   const onNodesDelete = useCallback((deletedNodes: Node[]) => {
@@ -169,9 +187,10 @@ export default function PipelineGraph() {
         onEdgesDelete={onEdgesDelete}
         onNodesDelete={onNodesDelete}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        deleteKeyCode="Delete"
+        deleteKeyCode={["Delete", "Backspace"]}
         fitView
         className="bg-slate-900"
       >
