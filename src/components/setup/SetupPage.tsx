@@ -11,6 +11,7 @@ export default function SetupPage() {
   const [mcpUrl, setMcpUrl] = useState('');
   const [mcpToken, setMcpToken] = useState('');
   const [connecting, setConnecting] = useState(false);
+  const [customModelName, setCustomModelName] = useState('');
 
   const handleAddMCP = async () => {
     if (!mcpName.trim() || !mcpUrl.trim()) return;
@@ -36,6 +37,26 @@ export default function SetupPage() {
       // Connection failed, server remains disconnected
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const isCustomModel = settings.selectedModel === 'custom' ||
+    !AVAILABLE_MODELS.some(m => m.id === settings.selectedModel);
+
+  const handleModelChange = (value: string) => {
+    if (value === 'custom') {
+      setSelectedModel('custom');
+      setCustomModelName('');
+    } else {
+      setSelectedModel(value);
+      setCustomModelName('');
+    }
+  };
+
+  const handleCustomModelNameChange = (value: string) => {
+    setCustomModelName(value);
+    if (value.trim()) {
+      setSelectedModel(value.trim());
     }
   };
 
@@ -83,14 +104,24 @@ export default function SetupPage() {
             Select Model
           </label>
           <select
-            value={settings.selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
+            value={isCustomModel ? 'custom' : settings.selectedModel}
+            onChange={(e) => handleModelChange(e.target.value)}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             {AVAILABLE_MODELS.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
+            <option value="custom">Custom (OpenRouter Model)</option>
           </select>
+          {isCustomModel && (
+            <input
+              type="text"
+              value={customModelName || settings.selectedModel}
+              onChange={(e) => handleCustomModelNameChange(e.target.value)}
+              placeholder="e.g. anthropic/claude-3-opus"
+              className="w-full mt-2 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          )}
         </div>
 
         {/* Step 2: MCP Servers (optional) */}
