@@ -98,16 +98,16 @@ export class PipelineEngine {
 
       const result = response.content || fullResponse;
 
-      // Store output in context
-      this.setContext(node.id, {
+      // Store output in context with display key
+      this.setContext(`${node.name}(${node.id})`, {
         value: result,
         producedBy: node.id,
         timestamp: Date.now(),
         type: 'intermediate',
       });
 
-      // Also store with agent name for easier reference
-      this.setContext(node.name, {
+      // Also store with agent name (hidden) for input mapping resolution
+      this.setInternalContext(node.name, {
         value: result,
         producedBy: node.id,
         timestamp: Date.now(),
@@ -166,6 +166,10 @@ ${Array.from(this.context.keys()).join(', ')}
   setContext(key: string, entry: ContextEntry): void {
     this.context.set(key, entry);
     this.callbacks.onContextUpdate(key, entry);
+  }
+
+  setInternalContext(key: string, entry: ContextEntry): void {
+    this.context.set(key, entry);
   }
 
   log(node: AgentNode, level: LogEntry['level'], message: string): void {
