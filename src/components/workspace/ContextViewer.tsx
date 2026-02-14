@@ -22,7 +22,7 @@ export default function ContextViewer() {
   return (
     <div className="p-3">
       <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">
-        Context ({entries.length})
+        Agent Outputs ({entries.length})
       </h3>
       {entries.length === 0 ? (
         <p className="text-xs text-slate-500">No context data yet. Execute the pipeline to see agent outputs.</p>
