@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../../store';
 import { designSwarm } from '../../core/designer/designer';
 import { mcpManager } from '../../core/mcp/client';
@@ -20,8 +20,22 @@ export default function TaskInput() {
     setExecutionStatus,
   } = useAppStore();
 
+  const activeProvider = settings.activeProvider;
+  const providerSettings = settings.providers[activeProvider] || {
+    apiKey: '',
+    selectedModel: AVAILABLE_MODELS[0].id,
+    customModels: [],
+    testStatus: 'idle',
+    testMessage: '',
+  };
+
+  const savedModels = useMemo(() => ([
+    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter • ${m.name}` })),
+    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter • ${id}` })),
+  ]), [providerSettings.customModels]);
+
   const handleDesign = useCallback(async () => {
-    if (!task.trim() || !settings.apiKey) return;
+    if (!task.trim() || !providerSettings.apiKey) return;
 
     setIsDesigning(true);
     setDesignProgress('Starting design...');
@@ -32,8 +46,8 @@ export default function TaskInput() {
     try {
       const design = await designSwarm({
         task: task.trim(),
-        apiKey: settings.apiKey,
-        model: settings.selectedModel,
+        apiKey: providerSettings.apiKey,
+        model: providerSettings.selectedModel,
         availableTools: mcpManager.getAvailableTools(),
         onProgress: (msg) => setDesignProgress(msg),
       });
@@ -46,7 +60,7 @@ export default function TaskInput() {
     } finally {
       setIsDesigning(false);
     }
-  }, [task, settings.apiKey, settings.selectedModel, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
+  }, [task, providerSettings.apiKey, providerSettings.selectedModel, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
 
   return (
     <div className="p-3 space-y-3">
@@ -62,12 +76,12 @@ export default function TaskInput() {
 
       <div className="flex items-center gap-2">
         <select
-          value={settings.selectedModel}
+          value={providerSettings.selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
           className="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
           disabled={isDesigning}
         >
-          {AVAILABLE_MODELS.map((m) => (
+          {savedModels.map((m) => (
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
@@ -75,7 +89,7 @@ export default function TaskInput() {
 
       <button
         onClick={handleDesign}
-        disabled={!task.trim() || !settings.apiKey || isDesigning}
+        disabled={!task.trim() || !providerSettings.apiKey || isDesigning}
         className="w-full py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
       >
         {isDesigning ? '🔄 Designing...' : '🐝 Design Swarm'}
