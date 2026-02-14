@@ -19,9 +19,17 @@ export default function Workspace() {
     setLeftPanelCollapsed,
     rightPanelCollapsed,
     setRightPanelCollapsed,
-    settings,
     initNodeStates,
+    settings,
   } = useAppStore();
+
+  const activeProvider = settings.activeProvider;
+  const providerSettings = settings.providers[activeProvider] || {
+    apiKey: '',
+    selectedModel: '',
+    customModels: [],
+    testStatus: 'idle',
+  };
 
   const handleExport = () => {
     if (currentDesign) {
@@ -48,6 +56,9 @@ export default function Workspace() {
         <span className="font-semibold text-sm">🐝 AutoSwarm Designer</span>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">
+            {activeProvider === 'openrouter' ? 'OpenRouter' : activeProvider} • {providerSettings.selectedModel || 'No model'}
+          </span>
           <button
             onClick={handleImport}
             className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
@@ -125,7 +136,7 @@ export default function Workspace() {
       <footer className="h-6 bg-slate-800 border-t border-slate-700 flex items-center px-4 text-xs text-slate-500 shrink-0">
         <span>MCP Servers: {settings.mcpServers.filter((s) => s.connected).length}/{settings.mcpServers.length}</span>
         <span className="mx-3">|</span>
-        <span>Model: {settings.selectedModel.split('/').pop()}</span>
+        <span>Model: {providerSettings.selectedModel ? providerSettings.selectedModel.split('/').pop() : 'None'}</span>
         <span className="mx-3">|</span>
         <span>{currentDesign ? `Agents: ${currentDesign.topology.nodes.length}` : 'Ready'}</span>
       </footer>

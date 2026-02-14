@@ -18,13 +18,19 @@ export default function ExecutionControls() {
   const engineRef = useRef<PipelineEngine | null>(null);
 
   const handleStart = useCallback(async () => {
-    if (!currentDesign || !settings.apiKey) return;
+    const providerSettings = settings.providers[settings.activeProvider] || {
+      apiKey: '',
+      selectedModel: '',
+      customModels: [],
+      testStatus: 'idle',
+    };
+    if (!currentDesign || !providerSettings.apiKey) return;
 
     clearLogs();
     initNodeStates(currentDesign.topology.nodes.map((n) => n.id));
     setExecutionStatus('running');
 
-    const engine = new PipelineEngine(settings.apiKey, settings.selectedModel, {
+    const engine = new PipelineEngine(providerSettings.apiKey, providerSettings.selectedModel, {
       onNodeStatusChange: (nodeId, status, error) => {
         setNodeStatus(nodeId, status, error);
       },
@@ -51,7 +57,7 @@ export default function ExecutionControls() {
         level: 'error',
       });
     }
-  }, [currentDesign, settings.apiKey, settings.selectedModel, clearLogs, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry]);
+  }, [currentDesign, settings.activeProvider, settings.providers, clearLogs, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'running' && engineRef.current) {
@@ -96,7 +102,10 @@ export default function ExecutionControls() {
         {executionStatus === 'idle' || executionStatus === 'completed' || executionStatus === 'failed' ? (
           <button
             onClick={handleStart}
-            disabled={!currentDesign || !settings.apiKey}
+            disabled={
+              !currentDesign ||
+              !(settings.providers[settings.activeProvider]?.apiKey)
+            }
             className="flex-1 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition"
           >
             ▶ Start

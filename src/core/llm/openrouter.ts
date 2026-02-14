@@ -126,3 +126,27 @@ export const AVAILABLE_MODELS = [
   { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash' },
   { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat' },
 ];
+
+export async function testOpenRouterApiKey(apiKey: string): Promise<number> {
+  if (!apiKey.trim()) {
+    throw new Error('API key is required');
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/models', {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'AutoSwarm Designer',
+    },
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`OpenRouter test failed (${response.status}): ${errBody || 'Unexpected error'}`);
+  }
+
+  const data = await response.json();
+  const models = Array.isArray(data?.data) ? data.data : [];
+  return models.length;
+}

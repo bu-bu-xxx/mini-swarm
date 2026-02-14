@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
   AppSettings,
   AppView,
+  ModelProvider,
+  ProviderSettings,
   SwarmDesign,
   AgentNode,
   PipelineEdge,
@@ -22,8 +24,12 @@ interface AppState {
 
   // Settings
   settings: AppSettings;
+  setActiveProvider: (provider: ModelProvider) => void;
   setApiKey: (key: string) => void;
   setSelectedModel: (model: string) => void;
+  addCustomModel: (model: string) => void;
+  removeCustomModel: (model: string) => void;
+  setProviderTestStatus: (status: ProviderSettings['testStatus'], message?: string) => void;
   setSetupComplete: (complete: boolean) => void;
   addMCPServer: (server: MCPServerConfig) => void;
   removeMCPServer: (id: string) => void;
@@ -75,16 +81,43 @@ interface AppState {
   setRightPanelCollapsed: (collapsed: boolean) => void;
 }
 
+const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
+
+const defaultProviderSettings = (): ProviderSettings => ({
+  apiKey: '',
+  selectedModel: 'anthropic/claude-sonnet-4',
+  customModels: [],
+  testStatus: 'idle',
+  testMessage: '',
+});
+
 const loadSettings = (): AppSettings => {
   try {
     const stored = localStorage.getItem('autoswarm_settings');
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (!parsed.providers) {
+        return {
+          activeProvider: DEFAULT_PROVIDER,
+          providers: {
+            [DEFAULT_PROVIDER]: {
+              ...defaultProviderSettings(),
+              apiKey: parsed.apiKey || '',
+              selectedModel: parsed.selectedModel || 'anthropic/claude-sonnet-4',
+            },
+          },
+          mcpServers: parsed.mcpServers || [],
+          setupComplete: parsed.setupComplete || false,
+        };
+      }
+      return parsed;
     }
   } catch { /* ignore */ }
   return {
-    apiKey: '',
-    selectedModel: 'anthropic/claude-sonnet-4',
+    activeProvider: DEFAULT_PROVIDER,
+    providers: {
+      [DEFAULT_PROVIDER]: defaultProviderSettings(),
+    },
     mcpServers: [],
     setupComplete: false,
   };
@@ -104,12 +137,60 @@ export const useAppStore = create<AppState>()(
 
     // Settings
     settings: loadSettings(),
+    setActiveProvider: (provider) => set((s) => {
+      if (!s.settings.providers[provider]) {
+        s.settings.providers[provider] = defaultProviderSettings();
+      }
+      s.settings.activeProvider = provider;
+      saveSettings(s.settings);
+    }),
     setApiKey: (key) => set((s) => {
-      s.settings.apiKey = key;
+      const provider = s.settings.activeProvider || DEFAULT_PROVIDER;
+      if (!s.settings.providers[provider]) {
+        s.settings.providers[provider] = defaultProviderSettings();
+      }
+      s.settings.providers[provider].apiKey = key;
+      s.settings.providers[provider].testStatus = 'idle';
+      s.settings.providers[provider].testMessage = '';
       saveSettings(s.settings);
     }),
     setSelectedModel: (model) => set((s) => {
-      s.settings.selectedModel = model;
+      const provider = s.settings.activeProvider || DEFAULT_PROVIDER;
+      if (!s.settings.providers[provider]) {
+        s.settings.providers[provider] = defaultProviderSettings();
+      }
+      s.settings.providers[provider].selectedModel = model;
+      saveSettings(s.settings);
+    }),
+    addCustomModel: (model) => set((s) => {
+      const provider = s.settings.activeProvider || DEFAULT_PROVIDER;
+      if (!s.settings.providers[provider]) {
+        s.settings.providers[provider] = defaultProviderSettings();
+      }
+      const providerSettings = s.settings.providers[provider];
+      if (!providerSettings.customModels.includes(model)) {
+        providerSettings.customModels.push(model);
+      }
+      providerSettings.selectedModel = model;
+      saveSettings(s.settings);
+    }),
+    removeCustomModel: (model) => set((s) => {
+      const provider = s.settings.activeProvider || DEFAULT_PROVIDER;
+      const providerSettings = s.settings.providers[provider];
+      if (!providerSettings) return;
+      providerSettings.customModels = providerSettings.customModels.filter((m) => m !== model);
+      if (providerSettings.selectedModel === model) {
+        providerSettings.selectedModel = providerSettings.customModels[0] || 'anthropic/claude-sonnet-4';
+      }
+      saveSettings(s.settings);
+    }),
+    setProviderTestStatus: (status, message) => set((s) => {
+      const provider = s.settings.activeProvider || DEFAULT_PROVIDER;
+      if (!s.settings.providers[provider]) {
+        s.settings.providers[provider] = defaultProviderSettings();
+      }
+      s.settings.providers[provider].testStatus = status;
+      s.settings.providers[provider].testMessage = message;
       saveSettings(s.settings);
     }),
     setSetupComplete: (complete) => set((s) => {

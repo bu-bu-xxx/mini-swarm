@@ -88,9 +88,19 @@ export interface MCPToolInfo {
   serverId: string;
 }
 
-export interface AppSettings {
+export type ModelProvider = 'openrouter';
+
+export interface ProviderSettings {
   apiKey: string;
   selectedModel: string;
+  customModels: string[];
+  testStatus: 'idle' | 'testing' | 'success' | 'error';
+  testMessage?: string;
+}
+
+export interface AppSettings {
+  activeProvider: ModelProvider;
+  providers: Record<ModelProvider, ProviderSettings>;
   mcpServers: MCPServerConfig[];
   setupComplete: boolean;
 }
