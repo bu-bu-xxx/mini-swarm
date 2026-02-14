@@ -143,13 +143,8 @@ export const useAppStore = create<AppState>()(
     addAgent: (agent) => set((s) => {
       if (!s.currentDesign) return;
       s.currentDesign.topology.nodes.push(agent);
-      // Add to last parallel group or create a new one
-      const groups = s.currentDesign.topology.parallelGroups;
-      if (groups.length > 0) {
-        groups[groups.length - 1].push(agent.id);
-      } else {
-        groups.push([agent.id]);
-      }
+      // New agents go into their own parallel group until connected
+      s.currentDesign.topology.parallelGroups.push([agent.id]);
       // Init node state
       s.nodeStates[agent.id] = { nodeId: agent.id, status: 'idle', logs: [] };
     }),
