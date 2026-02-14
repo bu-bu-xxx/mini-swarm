@@ -65,7 +65,7 @@ export default function TaskInput() {
   }, [task, providerSettings.apiKey, providerSettings.selectedModel, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
 
   const handleRefine = useCallback(async () => {
-    if (!refinePrompt.trim() || !settings.apiKey || !currentDesign) return;
+    if (!refinePrompt.trim() || !providerSettings.apiKey || !currentDesign) return;
 
     setIsDesigning(true);
     setDesignProgress('Refining pipeline...');
@@ -74,8 +74,8 @@ export default function TaskInput() {
       const design = await refineSwarm({
         currentDesign,
         refinementPrompt: refinePrompt.trim(),
-        apiKey: settings.apiKey,
-        model: settings.selectedModel,
+        apiKey: providerSettings.apiKey,
+        model: providerSettings.selectedModel,
         availableTools: mcpManager.getAvailableTools(),
         onProgress: (msg) => setDesignProgress(msg),
       });
@@ -89,7 +89,7 @@ export default function TaskInput() {
     } finally {
       setIsDesigning(false);
     }
-  }, [refinePrompt, settings.apiKey, settings.selectedModel, currentDesign, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
+  }, [refinePrompt, providerSettings.apiKey, providerSettings.selectedModel, currentDesign, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
 
   return (
     <div className="p-3 space-y-3">
@@ -137,7 +137,7 @@ export default function TaskInput() {
           />
           <button
             onClick={handleRefine}
-            disabled={!refinePrompt.trim() || !settings.apiKey || isDesigning}
+            disabled={!refinePrompt.trim() || !providerSettings.apiKey || isDesigning}
             className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
           >
             ✨ Refine Pipeline
