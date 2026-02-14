@@ -25,7 +25,7 @@ export default function ContextViewer() {
         Agent Outputs ({entries.length})
       </h3>
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500">No context data yet. Execute the pipeline to see agent outputs.</p>
+        <p className="text-xs text-slate-500">No agent outputs yet. Execute the pipeline to see agent outputs.</p>
       ) : (
         <div className="space-y-2">
           {entries.map(([key, entry]) => {
