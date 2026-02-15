@@ -98,10 +98,10 @@ export default function Workspace() {
             <div className="flex-1 overflow-y-auto">
               <TaskInput />
               <div className="border-t border-slate-700">
-                <TodoList />
+                <FileManager />
               </div>
               <div className="border-t border-slate-700">
-                <FileManager />
+                <TodoList />
               </div>
             </div>
           )}

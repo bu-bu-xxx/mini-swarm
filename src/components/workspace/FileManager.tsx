@@ -154,7 +154,7 @@ export default function FileManager() {
         >
           <h3 className="text-xs font-semibold text-slate-400 uppercase">
             <span className={`inline-block transition-transform ${outputsCollapsed ? '' : 'rotate-90'}`}>▶</span>
-            {' '}Agent Outputs ({outputFiles.length})
+            {' '}Saved Outputs ({outputFiles.length})
           </h3>
         </div>
         {!outputsCollapsed && (
