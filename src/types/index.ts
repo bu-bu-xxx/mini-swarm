@@ -24,6 +24,9 @@ export interface AgentNode {
   parallelGroup?: string;
   inputMappings: Mapping[];
   outputMappings: Mapping[];
+  temperature?: number;
+  maxTokens?: number;
+  maxIterations?: number;
 }
 
 export interface PipelineEdge {
@@ -98,16 +101,25 @@ export interface ProviderSettings {
   testMessage?: string;
 }
 
+export interface AgentDefaults {
+  temperature: number;
+  maxTokens: number;
+  maxIterations: number;
+}
+
 export interface AppSettings {
   activeProvider: ModelProvider;
   providers: Record<ModelProvider, ProviderSettings>;
   mcpServers: MCPServerConfig[];
   setupComplete: boolean;
+  agentDefaults: AgentDefaults;
 }
 
 export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  tool_call_id?: string;
+  tool_calls?: LLMToolCall[];
 }
 
 export interface LLMToolCall {

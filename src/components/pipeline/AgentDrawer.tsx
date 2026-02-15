@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
-const BUILT_IN_TOOLS = ['file_read', 'file_write'];
+const BUILT_IN_TOOLS = ['file_read', 'file_write', 'file_list', 'file_delete'];
 
 export default function AgentDrawer() {
   const selectedNodeId = useAppStore((s) => s.selectedNodeId);
@@ -254,6 +254,53 @@ export default function AgentDrawer() {
                   </button>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Parameters */}
+          <section>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Parameters</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Temperature</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={node.temperature ?? ''}
+                  placeholder="default"
+                  onChange={(e) => updateAgent(node.id, { temperature: e.target.value ? Number(e.target.value) : undefined })}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Max Tokens</label>
+                <input
+                  type="number"
+                  min="256"
+                  max="128000"
+                  step="256"
+                  value={node.maxTokens ?? ''}
+                  placeholder="default"
+                  onChange={(e) => updateAgent(node.id, { maxTokens: e.target.value ? Number(e.target.value) : undefined })}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Max Iterations</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={node.maxIterations ?? ''}
+                  placeholder="default"
+                  onChange={(e) => updateAgent(node.id, { maxIterations: e.target.value ? Number(e.target.value) : undefined })}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <p className="text-xs text-slate-500">Leave empty to use global defaults.</p>
             </div>
           </section>
 

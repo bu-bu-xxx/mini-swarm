@@ -19,6 +19,7 @@ export default function SettingsDrawer() {
     addMCPServer,
     removeMCPServer,
     updateMCPServer,
+    setAgentDefaults,
   } = useAppStore();
   const [mcpName, setMcpName] = useState('');
   const [mcpUrl, setMcpUrl] = useState('');
@@ -199,6 +200,49 @@ export default function SettingsDrawer() {
                   Connected to OpenRouter, model: {providerSettings.selectedModel}
                 </div>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Agent Defaults */}
+        <section className="mb-6">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">Agent Defaults</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Temperature (0-2)</label>
+              <input
+                type="number"
+                min="0"
+                max="2"
+                step="0.1"
+                value={settings.agentDefaults.temperature}
+                onChange={(e) => setAgentDefaults({ temperature: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Max Tokens</label>
+              <input
+                type="number"
+                min="256"
+                max="128000"
+                step="256"
+                value={settings.agentDefaults.maxTokens}
+                onChange={(e) => setAgentDefaults({ maxTokens: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Max Iterations (ReAct loop limit)</label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                value={settings.agentDefaults.maxIterations}
+                onChange={(e) => setAgentDefaults({ maxIterations: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
             </div>
           </div>
         </section>

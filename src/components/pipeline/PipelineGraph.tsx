@@ -155,7 +155,7 @@ export default function PipelineGraph() {
       name: newAgentName.trim(),
       role: newAgentRole,
       skillMarkdown: `You are a ${newAgentRole} agent named ${newAgentName.trim()}. Complete your assigned tasks.`,
-      tools: ['file_read', 'file_write'],
+      tools: ['file_read', 'file_write', 'file_list', 'file_delete'],
       inputMappings: [],
       outputMappings: [{ from: 'output', to: `context.${newAgentName.trim()}` }],
     });

@@ -6,6 +6,7 @@ import type {
   AppView,
   ModelProvider,
   ProviderSettings,
+  AgentDefaults,
   SwarmDesign,
   AgentNode,
   PipelineEdge,
@@ -16,6 +17,8 @@ import type {
   NodeStatus,
   MCPServerConfig,
 } from '../types';
+import type { FileEntry } from '../core/storage/opfs';
+import { opfsService } from '../core/storage/opfs';
 
 interface AppState {
   // View
@@ -34,6 +37,7 @@ interface AppState {
   addMCPServer: (server: MCPServerConfig) => void;
   removeMCPServer: (id: string) => void;
   updateMCPServer: (id: string, updates: Partial<MCPServerConfig>) => void;
+  setAgentDefaults: (defaults: Partial<AgentDefaults>) => void;
 
   // Swarm Design
   currentDesign: SwarmDesign | null;
@@ -79,6 +83,14 @@ interface AppState {
   setLeftPanelCollapsed: (collapsed: boolean) => void;
   rightPanelCollapsed: boolean;
   setRightPanelCollapsed: (collapsed: boolean) => void;
+
+  // File Manager
+  workspaceFiles: FileEntry[];
+  outputFiles: FileEntry[];
+  refreshWorkspaceFiles: () => Promise<void>;
+  refreshOutputFiles: () => Promise<void>;
+  previewFile: { name: string; content: string; source: 'workspace' | 'outputs' } | null;
+  setPreviewFile: (file: { name: string; content: string; source: 'workspace' | 'outputs' } | null) => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -90,6 +102,12 @@ const defaultProviderSettings = (): ProviderSettings => ({
   testStatus: 'idle',
   testMessage: '',
 });
+
+const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
+  temperature: 0.7,
+  maxTokens: 4096,
+  maxIterations: 10,
+};
 
 const loadSettings = (): AppSettings => {
   try {
@@ -108,9 +126,13 @@ const loadSettings = (): AppSettings => {
           },
           mcpServers: parsed.mcpServers || [],
           setupComplete: parsed.setupComplete || false,
+          agentDefaults: parsed.agentDefaults || DEFAULT_AGENT_DEFAULTS,
         };
       }
-      return parsed;
+      return {
+        ...parsed,
+        agentDefaults: parsed.agentDefaults || DEFAULT_AGENT_DEFAULTS,
+      };
     }
   } catch { /* ignore */ }
   return {
@@ -120,6 +142,7 @@ const loadSettings = (): AppSettings => {
     },
     mcpServers: [],
     setupComplete: false,
+    agentDefaults: DEFAULT_AGENT_DEFAULTS,
   };
 };
 
@@ -235,6 +258,10 @@ export const useAppStore = create<AppState>()(
         Object.assign(s.settings.mcpServers[idx], updates);
         saveSettings(s.settings);
       }
+    }),
+    setAgentDefaults: (defaults) => set((s) => {
+      Object.assign(s.settings.agentDefaults, defaults);
+      saveSettings(s.settings);
     }),
 
     // Swarm Design
@@ -387,5 +414,27 @@ export const useAppStore = create<AppState>()(
     setLeftPanelCollapsed: (collapsed) => set((s) => { s.leftPanelCollapsed = collapsed; }),
     rightPanelCollapsed: false,
     setRightPanelCollapsed: (collapsed) => set((s) => { s.rightPanelCollapsed = collapsed; }),
+
+    // File Manager
+    workspaceFiles: [],
+    outputFiles: [],
+    refreshWorkspaceFiles: async () => {
+      try {
+        const files = await opfsService.listDirectory('.', true);
+        set((s) => { s.workspaceFiles = files; });
+      } catch {
+        set((s) => { s.workspaceFiles = []; });
+      }
+    },
+    refreshOutputFiles: async () => {
+      try {
+        const files = await opfsService.listOutputs();
+        set((s) => { s.outputFiles = files; });
+      } catch {
+        set((s) => { s.outputFiles = []; });
+      }
+    },
+    previewFile: null,
+    setPreviewFile: (file) => set((s) => { s.previewFile = file; }),
   }))
 );

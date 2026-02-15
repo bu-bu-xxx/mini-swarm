@@ -33,7 +33,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
 
   const designResult = await callLLMForJSON<LLMDesignResponse>({
     messages: [
@@ -47,7 +47,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: file_read, file_write
+Built-in tools always available: file_read, file_write, file_list, file_delete
 
 Respond with a JSON object with this exact structure:
 {
@@ -223,7 +223,7 @@ export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
 
   const currentDesignJSON = JSON.stringify({
     taskDescription: currentDesign.taskDescription,
@@ -254,7 +254,7 @@ ${currentDesignJSON}
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: file_read, file_write
+Built-in tools always available: file_read, file_write, file_list, file_delete
 
 Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
 {
