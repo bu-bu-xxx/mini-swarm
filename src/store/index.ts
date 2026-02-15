@@ -148,7 +148,7 @@ function rebuildOutputMappings(nodes: AgentNode[], edges: PipelineEdge[], nodeId
     // Show where output goes: to each downstream node's input
     node.outputMappings = downstreamNodes.map((dn) => ({
       from: 'output',
-      to: `context.${node.name} → ${dn.name}`,
+      to: `context.${node.name} -> ${dn.name}`,
     }));
   }
 }
