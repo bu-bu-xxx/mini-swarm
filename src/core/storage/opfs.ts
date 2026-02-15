@@ -381,6 +381,56 @@ export class OPFSService {
     await this.writeFile(path, content);
   }
 
+  async clearWorkspace(): Promise<void> {
+    await this.init();
+
+    if (!this._supported) {
+      this.workspaceMemory.clear();
+      return;
+    }
+
+    const wsDir = await this.root!.getDirectoryHandle('workspace');
+    const names: string[] = [];
+    for await (const [name] of dirEntries(wsDir)) {
+      names.push(name);
+    }
+    for (const name of names) {
+      await removeDirectoryRecursive(wsDir, name);
+    }
+  }
+
+  /** Returns all files (recursively) with their content, for ZIP export. */
+  async getAllWorkspaceFiles(): Promise<{ path: string; content: string }[]> {
+    await this.init();
+    const entries = await this.listDirectory('.', true);
+    const files: { path: string; content: string }[] = [];
+    for (const entry of entries) {
+      if (entry.kind === 'file') {
+        try {
+          const content = await this.readFile(entry.path);
+          files.push({ path: entry.path, content });
+        } catch { /* skip unreadable */ }
+      }
+    }
+    return files;
+  }
+
+  /** Returns all output files with their content, for ZIP export. */
+  async getAllOutputFiles(): Promise<{ path: string; content: string }[]> {
+    await this.init();
+    const entries = await this.listOutputs();
+    const files: { path: string; content: string }[] = [];
+    for (const entry of entries) {
+      if (entry.kind === 'file') {
+        try {
+          const content = await this.readOutput(entry.path);
+          files.push({ path: entry.path, content });
+        } catch { /* skip unreadable */ }
+      }
+    }
+    return files;
+  }
+
   // ── Internal helpers ──
 
   private async navigateTo(

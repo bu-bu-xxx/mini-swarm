@@ -1,6 +1,128 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store';
 import { opfsService } from '../../core/storage/opfs';
+import type { FileEntry } from '../../core/storage/opfs';
+import JSZip from 'jszip';
+
+// ── Tree node structure for directory view ──
+
+interface TreeNode {
+  name: string;
+  path: string;
+  kind: 'file' | 'directory';
+  size?: number;
+  children: TreeNode[];
+}
+
+function buildTree(entries: FileEntry[]): TreeNode[] {
+  const root: TreeNode[] = [];
+  const dirMap = new Map<string, TreeNode>();
+
+  // Sort so directories come before their children
+  const sorted = [...entries].sort((a, b) => a.path.localeCompare(b.path));
+
+  for (const entry of sorted) {
+    const parts = entry.path.split('/');
+    const node: TreeNode = {
+      name: entry.name,
+      path: entry.path,
+      kind: entry.kind,
+      size: entry.size,
+      children: [],
+    };
+
+    if (parts.length === 1) {
+      root.push(node);
+      if (entry.kind === 'directory') {
+        dirMap.set(entry.path, node);
+      }
+    } else {
+      // Find parent directory
+      const parentPath = parts.slice(0, -1).join('/');
+      const parent = dirMap.get(parentPath);
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        root.push(node);
+      }
+      if (entry.kind === 'directory') {
+        dirMap.set(entry.path, node);
+      }
+    }
+  }
+
+  return root;
+}
+
+// ── Recursive tree item component ──
+
+function FileTreeItem({
+  node,
+  depth,
+  expandedDirs,
+  toggleDir,
+  onFileClick,
+  onDeleteFile,
+}: {
+  node: TreeNode;
+  depth: number;
+  expandedDirs: Set<string>;
+  toggleDir: (path: string) => void;
+  onFileClick: (path: string) => void;
+  onDeleteFile: (path: string) => void;
+}) {
+  const isExpanded = expandedDirs.has(node.path);
+
+  if (node.kind === 'directory') {
+    return (
+      <>
+        <div
+          className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-slate-800 rounded px-1 py-0.5"
+          style={{ paddingLeft: `${depth * 12 + 4}px` }}
+          onClick={() => toggleDir(node.path)}
+        >
+          <span className={`inline-block transition-transform text-[10px] ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+          <span>📁</span>
+          <span className="text-slate-300 flex-1 truncate">{node.name}</span>
+        </div>
+        {isExpanded && node.children.map((child) => (
+          <FileTreeItem
+            key={child.path}
+            node={child}
+            depth={depth + 1}
+            expandedDirs={expandedDirs}
+            toggleDir={toggleDir}
+            onFileClick={onFileClick}
+            onDeleteFile={onDeleteFile}
+          />
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center gap-1.5 text-xs group cursor-pointer hover:bg-slate-800 rounded px-1 py-0.5"
+      style={{ paddingLeft: `${depth * 12 + 4}px` }}
+      onClick={() => onFileClick(node.path)}
+    >
+      <span>📄</span>
+      <span className="text-slate-300 flex-1 truncate">{node.name}</span>
+      {node.size !== undefined && (
+        <span className="text-slate-600 text-[10px]">{formatSize(node.size)}</span>
+      )}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDeleteFile(node.path); }}
+        className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition text-[10px]"
+        title="Delete"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ── Main FileManager component ──
 
 export default function FileManager() {
   const {
@@ -14,6 +136,7 @@ export default function FileManager() {
 
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize OPFS and load files on mount
@@ -25,6 +148,18 @@ export default function FileManager() {
     };
     init();
   }, [refreshWorkspaceFiles, refreshOutputFiles]);
+
+  const toggleDir = useCallback((path: string) => {
+    setExpandedDirs((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
 
   const handleUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -76,7 +211,44 @@ export default function FileManager() {
     }
   }, [refreshWorkspaceFiles, previewFile, setPreviewFile]);
 
+  const handleClearWorkspace = useCallback(async () => {
+    try {
+      await opfsService.clearWorkspace();
+      await refreshWorkspaceFiles();
+      setPreviewFile(null);
+    } catch {
+      // clear failed
+    }
+  }, [refreshWorkspaceFiles, setPreviewFile]);
+
+  const handleDownloadZip = useCallback(async (source: 'workspace' | 'outputs') => {
+    try {
+      const files = source === 'workspace'
+        ? await opfsService.getAllWorkspaceFiles()
+        : await opfsService.getAllOutputFiles();
+      if (files.length === 0) return;
+
+      const zip = new JSZip();
+      for (const file of files) {
+        zip.file(file.path, file.content);
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${source}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // download failed
+    }
+  }, []);
+
   const opfsWarning = opfsService.initialized && !opfsService.usingOPFS;
+
+  const workspaceTree = buildTree(workspaceFiles);
 
   return (
     <div className="p-3">
@@ -90,15 +262,33 @@ export default function FileManager() {
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-slate-400 uppercase">
-            📁 Workspace ({workspaceFiles.length})
+            📁 Workspace ({workspaceFiles.filter(f => f.kind === 'file').length})
           </h3>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="text-xs text-purple-400 hover:text-purple-300 transition"
-          >
-            📤 Upload
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleDownloadZip('workspace')}
+              disabled={workspaceFiles.length === 0}
+              className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
+              title="Download as ZIP"
+            >
+              📦
+            </button>
+            <button
+              onClick={handleClearWorkspace}
+              disabled={workspaceFiles.length === 0}
+              className="text-xs text-red-400 hover:text-red-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
+              title="Clear all files"
+            >
+              🗑
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="text-xs text-purple-400 hover:text-purple-300 transition"
+            >
+              📤 Upload
+            </button>
+          </div>
         </div>
         <input
           ref={fileInputRef}
@@ -119,34 +309,23 @@ export default function FileManager() {
             </p>
           ) : (
             <div className="space-y-0.5">
-              {workspaceFiles.map((f) => (
-                <div
-                  key={f.path}
-                  className="flex items-center gap-1.5 text-xs group cursor-pointer hover:bg-slate-800 rounded px-1 py-0.5"
-                  onClick={() => handleFileClick(f.path, 'workspace')}
-                >
-                  <span>{f.kind === 'directory' ? '📁' : '📄'}</span>
-                  <span className="text-slate-300 flex-1 truncate">{f.path}</span>
-                  {f.size !== undefined && (
-                    <span className="text-slate-600 text-[10px]">{formatSize(f.size)}</span>
-                  )}
-                  {f.kind === 'file' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteFile(f.path); }}
-                      className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition text-[10px]"
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+              {workspaceTree.map((node) => (
+                <FileTreeItem
+                  key={node.path}
+                  node={node}
+                  depth={0}
+                  expandedDirs={expandedDirs}
+                  toggleDir={toggleDir}
+                  onFileClick={(p) => handleFileClick(p, 'workspace')}
+                  onDeleteFile={handleDeleteFile}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Agent Outputs Section */}
+      {/* Saved Outputs Section */}
       <div>
         <div
           className="flex items-center justify-between mb-2 cursor-pointer"
@@ -156,6 +335,14 @@ export default function FileManager() {
             <span className={`inline-block transition-transform ${outputsCollapsed ? '' : 'rotate-90'}`}>▶</span>
             {' '}Saved Outputs ({outputFiles.length})
           </h3>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDownloadZip('outputs'); }}
+            disabled={outputFiles.length === 0}
+            className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
+            title="Download as ZIP"
+          >
+            📦
+          </button>
         </div>
         {!outputsCollapsed && (
           <div className="border border-slate-700 rounded p-1">
