@@ -119,7 +119,7 @@ Design tips:
       name: a.name,
       role: a.role,
       skillMarkdown: a.skill,
-      tools: [...a.tools, 'context_read', 'context_write'],
+      tools: [...new Set([...a.tools, 'context_read', 'context_write'])],
       inputMappings: a.dependsOn.map((dep) => ({
         from: `context.${dep}`,
         to: 'input',
@@ -324,7 +324,7 @@ Important:
       name: a.name,
       role: a.role,
       skillMarkdown: a.skill,
-      tools: [...a.tools, 'context_read', 'context_write'],
+      tools: [...new Set([...a.tools, 'context_read', 'context_write'])],
       inputMappings: a.dependsOn.map((dep) => ({
         from: `context.${dep}`,
         to: 'input',

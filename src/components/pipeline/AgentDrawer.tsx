@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
+const BUILT_IN_TOOLS = ['context_read', 'context_write', 'file_read', 'file_write'];
+
 export default function AgentDrawer() {
   const selectedNodeId = useAppStore((s) => s.selectedNodeId);
   const currentDesign = useAppStore((s) => s.currentDesign);
@@ -10,10 +12,13 @@ export default function AgentDrawer() {
   const context = useAppStore((s) => s.context);
   const updateAgent = useAppStore((s) => s.updateAgent);
   const removeAgent = useAppStore((s) => s.removeAgent);
+  const mcpServers = useAppStore((s) => s.settings.mcpServers);
   const [editingSkill, setEditingSkill] = useState(false);
   const [skillDraft, setSkillDraft] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [showAddTool, setShowAddTool] = useState(false);
+  const [customToolName, setCustomToolName] = useState('');
 
   if (!selectedNodeId || !currentDesign) return null;
 
@@ -52,6 +57,23 @@ export default function AgentDrawer() {
   const handleDelete = () => {
     removeAgent(node.id);
   };
+
+  const handleRemoveTool = (toolName: string) => {
+    updateAgent(node.id, { tools: node.tools.filter((t) => t !== toolName) });
+  };
+
+  const handleAddTool = (toolName: string) => {
+    if (toolName && !node.tools.includes(toolName)) {
+      updateAgent(node.id, { tools: [...node.tools, toolName] });
+    }
+    setShowAddTool(false);
+    setCustomToolName('');
+  };
+
+  // Collect all available MCP tools from connected servers
+  const mcpToolNames = mcpServers.flatMap((s) => s.tools.map((t) => t.name));
+  const allKnownTools = [...new Set([...BUILT_IN_TOOLS, ...mcpToolNames])];
+  const addableTools = allKnownTools.filter((t) => !node.tools.includes(t));
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -178,14 +200,63 @@ export default function AgentDrawer() {
 
           {/* Tools */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">
-              Available Tools ({node.tools.length})
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-slate-400 uppercase">
+                Available Tools ({node.tools.length})
+              </h3>
+              <button
+                onClick={() => setShowAddTool(!showAddTool)}
+                className="text-xs text-purple-400 hover:text-purple-300 transition"
+              >
+                ➕ Add
+              </button>
+            </div>
+            {showAddTool && (
+              <div className="mb-2 p-2 bg-slate-900 border border-slate-600 rounded-lg space-y-2">
+                {addableTools.length > 0 && (
+                  <div className="space-y-1">
+                    {addableTools.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => handleAddTool(t)}
+                        className="w-full text-left text-xs px-2 py-1 rounded hover:bg-slate-700 text-slate-300 transition"
+                      >
+                        🔧 {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    value={customToolName}
+                    onChange={(e) => setCustomToolName(e.target.value)}
+                    placeholder="Custom tool name..."
+                    className="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && customToolName.trim()) handleAddTool(customToolName.trim()); }}
+                  />
+                  <button
+                    onClick={() => { if (customToolName.trim()) handleAddTool(customToolName.trim()); }}
+                    disabled={!customToolName.trim()}
+                    className="px-2 py-1 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded text-xs transition"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="space-y-1">
               {node.tools.map((t) => (
-                <div key={t} className="flex items-center gap-2 text-xs">
+                <div key={t} className="flex items-center gap-2 text-xs group">
                   <span className="text-purple-400">🔧</span>
-                  <span className="text-slate-300">{t}</span>
+                  <span className="text-slate-300 flex-1">{t}</span>
+                  <button
+                    onClick={() => handleRemoveTool(t)}
+                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
+                    title="Remove tool"
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
             </div>
