@@ -11,6 +11,7 @@ export default function ExecutionControls() {
     setNodeStatus,
     addLog,
     setContextEntry,
+    clearContext,
     initNodeStates,
     clearLogs,
   } = useAppStore();
@@ -27,6 +28,7 @@ export default function ExecutionControls() {
     if (!currentDesign || !providerSettings.apiKey) return;
 
     clearLogs();
+    clearContext();
     initNodeStates(currentDesign.topology.nodes.map((n) => n.id));
     setExecutionStatus('running');
 
@@ -57,7 +59,7 @@ export default function ExecutionControls() {
         level: 'error',
       });
     }
-  }, [currentDesign, settings.activeProvider, settings.providers, clearLogs, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry]);
+  }, [currentDesign, settings.activeProvider, settings.providers, clearLogs, clearContext, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'running' && engineRef.current) {
