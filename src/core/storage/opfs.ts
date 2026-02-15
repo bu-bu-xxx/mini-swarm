@@ -236,6 +236,27 @@ export class OPFSService {
     await parentDir.removeEntry(fileName);
   }
 
+  async deleteDirectory(path: string): Promise<void> {
+    validatePath(path);
+    const normalized = normalizePath(path);
+    await this.init();
+
+    if (!this._supported) {
+      this.workspaceMemory.deleteFile(normalized);
+      this.workspaceMemory.clearPrefix(normalized + '/');
+      return;
+    }
+
+    const wsDir = await this.root!.getDirectoryHandle('workspace');
+    const parts = normalized.split('/');
+    const dirName = parts.pop()!;
+    let parent = wsDir;
+    for (const part of parts) {
+      if (part) parent = await parent.getDirectoryHandle(part);
+    }
+    await removeDirectoryRecursive(parent, dirName);
+  }
+
   async listDirectory(path?: string, recursive?: boolean): Promise<FileEntry[]> {
     const normalized = normalizePath(path || '.');
     await this.init();

@@ -63,6 +63,7 @@ function FileTreeItem({
   toggleDir,
   onFileClick,
   onDeleteFile,
+  onDeleteDir,
 }: {
   node: TreeNode;
   depth: number;
@@ -70,6 +71,7 @@ function FileTreeItem({
   toggleDir: (path: string) => void;
   onFileClick: (path: string) => void;
   onDeleteFile: (path: string) => void;
+  onDeleteDir: (path: string) => void;
 }) {
   const isExpanded = expandedDirs.has(node.path);
 
@@ -77,13 +79,20 @@ function FileTreeItem({
     return (
       <>
         <div
-          className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-slate-800 rounded px-1 py-0.5"
+          className="flex items-center gap-1.5 text-xs group cursor-pointer hover:bg-slate-800 rounded px-1 py-0.5"
           style={{ paddingLeft: `${depth * 12 + 4}px` }}
           onClick={() => toggleDir(node.path)}
         >
           <span className={`inline-block transition-transform text-[10px] ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
           <span>📁</span>
           <span className="text-slate-300 flex-1 truncate">{node.name}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteDir(node.path); }}
+            className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition text-[10px]"
+            title="Delete directory"
+          >
+            ✕
+          </button>
         </div>
         {isExpanded && node.children.map((child) => (
           <FileTreeItem
@@ -94,6 +103,7 @@ function FileTreeItem({
             toggleDir={toggleDir}
             onFileClick={onFileClick}
             onDeleteFile={onDeleteFile}
+            onDeleteDir={onDeleteDir}
           />
         ))}
       </>
@@ -210,6 +220,15 @@ export default function FileManager() {
       // delete failed
     }
   }, [refreshWorkspaceFiles, previewFile, setPreviewFile]);
+
+  const handleDeleteDir = useCallback(async (path: string) => {
+    try {
+      await opfsService.deleteDirectory(path);
+      await refreshWorkspaceFiles();
+    } catch {
+      // delete failed
+    }
+  }, [refreshWorkspaceFiles]);
 
   const handleClearWorkspace = useCallback(async () => {
     try {
@@ -330,6 +349,7 @@ export default function FileManager() {
                   toggleDir={toggleDir}
                   onFileClick={(p) => handleFileClick(p, 'workspace')}
                   onDeleteFile={handleDeleteFile}
+                  onDeleteDir={handleDeleteDir}
                 />
               ))}
             </div>
