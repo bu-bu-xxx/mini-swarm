@@ -162,13 +162,12 @@ export class PipelineEngine {
           let toolResult: string;
           try {
             toolResult = await this.executeTool(tc.name, tc.arguments);
+            // Notify UI of workspace changes for file-modifying tools
+            if (['file_write', 'file_delete'].includes(tc.name)) {
+              this.callbacks.onWorkspaceChanged?.();
+            }
           } catch (err) {
             toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
-          }
-
-          // Notify UI of workspace changes for file-modifying tools
-          if (['file_write', 'file_delete'].includes(tc.name)) {
-            this.callbacks.onWorkspaceChanged?.();
           }
 
           messages.push({
