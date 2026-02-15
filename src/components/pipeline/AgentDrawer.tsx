@@ -45,12 +45,7 @@ export default function AgentDrawer() {
 
   const handleSaveName = () => {
     const newName = nameDraft.trim() || node.name;
-    updateAgent(node.id, {
-      name: newName,
-      outputMappings: node.outputMappings.map((m) =>
-        m.to === `context.${node.name}` ? { ...m, to: `context.${newName}` } : m
-      ),
-    });
+    updateAgent(node.id, { name: newName });
     setEditingName(false);
   };
 

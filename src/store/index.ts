@@ -129,6 +129,30 @@ const saveSettings = (settings: AppSettings) => {
   } catch { /* ignore */ }
 };
 
+/**
+ * Rebuild outputMappings for a node based on which other nodes consume its output via inputMappings.
+ * outputMappings is declarative: it shows where this node's output goes.
+ */
+function rebuildOutputMappings(nodes: AgentNode[], edges: PipelineEdge[], nodeId: string): void {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node) return;
+
+  // Find all downstream nodes connected via edges
+  const downstreamIds = edges.filter((e) => e.source === nodeId).map((e) => e.target);
+  const downstreamNodes = nodes.filter((n) => downstreamIds.includes(n.id));
+
+  if (downstreamNodes.length === 0) {
+    // No downstream consumers — keep default self-output declaration
+    node.outputMappings = [{ from: 'output', to: `context.${node.name}` }];
+  } else {
+    // Show where output goes: to each downstream node's input
+    node.outputMappings = downstreamNodes.map((dn) => ({
+      from: 'output',
+      to: `context.${node.name} → ${dn.name}`,
+    }));
+  }
+}
+
 export const useAppStore = create<AppState>()(
   immer((set) => ({
     // View
@@ -233,10 +257,23 @@ export const useAppStore = create<AppState>()(
     }),
     removeAgent: (agentId) => set((s) => {
       if (!s.currentDesign) return;
+      const removedNode = s.currentDesign.topology.nodes.find((n) => n.id === agentId);
+      const removedName = removedNode?.name;
       s.currentDesign.topology.nodes = s.currentDesign.topology.nodes.filter((n) => n.id !== agentId);
       s.currentDesign.topology.edges = s.currentDesign.topology.edges.filter(
         (e) => e.source !== agentId && e.target !== agentId
       );
+      // Clean up inputMappings on nodes that referenced the deleted agent
+      if (removedName) {
+        const mappingFrom = `context.${removedName}`;
+        for (const node of s.currentDesign.topology.nodes) {
+          node.inputMappings = node.inputMappings.filter((m) => m.from !== mappingFrom);
+        }
+      }
+      // Rebuild outputMappings for all remaining nodes
+      for (const node of s.currentDesign.topology.nodes) {
+        rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, node.id);
+      }
       s.currentDesign.topology.parallelGroups = s.currentDesign.topology.parallelGroups
         .map((g) => g.filter((id) => id !== agentId))
         .filter((g) => g.length > 0);
@@ -247,7 +284,24 @@ export const useAppStore = create<AppState>()(
       if (!s.currentDesign) return;
       const idx = s.currentDesign.topology.nodes.findIndex((n) => n.id === agentId);
       if (idx !== -1) {
+        const oldName = s.currentDesign.topology.nodes[idx].name;
         Object.assign(s.currentDesign.topology.nodes[idx], updates);
+        // If name changed, cascade update inputMappings on downstream nodes
+        if (updates.name && updates.name !== oldName) {
+          const oldMapping = `context.${oldName}`;
+          const newMapping = `context.${updates.name}`;
+          for (const node of s.currentDesign.topology.nodes) {
+            for (const m of node.inputMappings) {
+              if (m.from === oldMapping) {
+                m.from = newMapping;
+              }
+            }
+          }
+          // Rebuild outputMappings for all nodes to reflect name change
+          for (const node of s.currentDesign.topology.nodes) {
+            rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, node.id);
+          }
+        }
       }
     }),
     addEdge: (edge) => set((s) => {
@@ -258,11 +312,38 @@ export const useAppStore = create<AppState>()(
       );
       if (!exists) {
         s.currentDesign.topology.edges.push(edge);
+        // Sync inputMappings on target node
+        const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
+        const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
+        if (sourceNode && targetNode) {
+          const mappingFrom = `context.${sourceNode.name}`;
+          if (!targetNode.inputMappings.some((m) => m.from === mappingFrom)) {
+            targetNode.inputMappings.push({ from: mappingFrom, to: 'input' });
+          }
+        }
+        // Regenerate outputMappings for source node
+        if (sourceNode) {
+          rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+        }
       }
     }),
     removeEdge: (edgeId) => set((s) => {
       if (!s.currentDesign) return;
-      s.currentDesign.topology.edges = s.currentDesign.topology.edges.filter((e) => e.id !== edgeId);
+      const edge = s.currentDesign.topology.edges.find((e) => e.id === edgeId);
+      if (edge) {
+        // Remove corresponding inputMapping on target node
+        const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
+        const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
+        if (sourceNode && targetNode) {
+          const mappingFrom = `context.${sourceNode.name}`;
+          targetNode.inputMappings = targetNode.inputMappings.filter((m) => m.from !== mappingFrom);
+        }
+        s.currentDesign.topology.edges = s.currentDesign.topology.edges.filter((e) => e.id !== edgeId);
+        // Regenerate outputMappings for source node
+        if (sourceNode) {
+          rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+        }
+      }
     }),
 
     // Execution
