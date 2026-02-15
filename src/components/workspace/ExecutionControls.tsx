@@ -48,6 +48,9 @@ export default function ExecutionControls() {
         refreshWorkspaceFiles();
         refreshOutputFiles();
       },
+      onWorkspaceChanged: () => {
+        refreshWorkspaceFiles();
+      },
     }, settings.agentDefaults);
 
     engineRef.current = engine;
