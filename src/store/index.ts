@@ -344,7 +344,7 @@ export const useAppStore = create<AppState>()(
         (e) => e.source === edge.source && e.target === edge.target
       );
       if (exists) return;
-      // Reject if adding this edge would create a cycle
+      // Reject if adding this edge would create a cycle (silently — UI graph prevents most cases)
       if (wouldCreateCycle(s.currentDesign.topology.edges, edge.source, edge.target)) return;
 
       s.currentDesign.topology.edges.push(edge);
