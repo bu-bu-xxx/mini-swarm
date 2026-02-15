@@ -33,7 +33,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in context_read, context_write, file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
 
   const designResult = await callLLMForJSON<LLMDesignResponse>({
     messages: [
@@ -47,7 +47,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: context_read, context_write, file_read, file_write
+Built-in tools always available: file_read, file_write
 
 Respond with a JSON object with this exact structure:
 {
@@ -119,7 +119,7 @@ Design tips:
       name: a.name,
       role: a.role,
       skillMarkdown: a.skill,
-      tools: [...new Set([...a.tools, 'context_read', 'context_write'])],
+      tools: a.tools,
       inputMappings: a.dependsOn.map((dep) => ({
         from: `context.${dep}`,
         to: 'input',
@@ -223,7 +223,7 @@ export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in context_read, context_write, file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
 
   const currentDesignJSON = JSON.stringify({
     taskDescription: currentDesign.taskDescription,
@@ -254,7 +254,7 @@ ${currentDesignJSON}
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: context_read, context_write, file_read, file_write
+Built-in tools always available: file_read, file_write
 
 Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
 {
@@ -324,7 +324,7 @@ Important:
       name: a.name,
       role: a.role,
       skillMarkdown: a.skill,
-      tools: [...new Set([...a.tools, 'context_read', 'context_write'])],
+      tools: a.tools,
       inputMappings: a.dependsOn.map((dep) => ({
         from: `context.${dep}`,
         to: 'input',
