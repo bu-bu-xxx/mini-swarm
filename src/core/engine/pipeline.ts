@@ -1,6 +1,7 @@
 import { callLLM } from '../llm/openrouter';
 import { executeBuiltinTool, getToolSchemasForAgent, isBuiltinTool } from '../tools/builtin';
 import { opfsService } from '../storage/opfs';
+import { identifyParallelGroups } from '../../utils/topology';
 import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage } from '../../types';
 
 export interface EngineCallbacks {
@@ -72,10 +73,12 @@ export class PipelineEngine {
   }
 
   getExecutionBatches(design: SwarmDesign): AgentNode[][] {
-    const { nodes, parallelGroups } = design.topology;
+    const { nodes, edges } = design.topology;
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    // Compute parallelGroups in real-time from current edges
+    const groups = identifyParallelGroups(nodes, edges);
 
-    return parallelGroups.map((group) =>
+    return groups.map((group) =>
       group.map((id) => nodeMap.get(id)!).filter(Boolean)
     );
   }

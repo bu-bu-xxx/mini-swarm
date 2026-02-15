@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
+import { identifyParallelGroups, wouldCreateCycle } from '../utils/topology';
 import type {
   AppSettings,
   AppView,
@@ -277,8 +278,11 @@ export const useAppStore = create<AppState>()(
     addAgent: (agent) => set((s) => {
       if (!s.currentDesign) return;
       s.currentDesign.topology.nodes.push(agent);
-      // New agents go into their own parallel group until connected
-      s.currentDesign.topology.parallelGroups.push([agent.id]);
+      // Recompute parallel groups from current edges
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
       // Init node state
       s.nodeStates[agent.id] = { nodeId: agent.id, status: 'idle', logs: [] };
     }),
@@ -301,9 +305,11 @@ export const useAppStore = create<AppState>()(
       for (const node of s.currentDesign.topology.nodes) {
         rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, node.id);
       }
-      s.currentDesign.topology.parallelGroups = s.currentDesign.topology.parallelGroups
-        .map((g) => g.filter((id) => id !== agentId))
-        .filter((g) => g.length > 0);
+      // Recompute parallel groups from current edges
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
       delete s.nodeStates[agentId];
       if (s.selectedNodeId === agentId) s.selectedNodeId = null;
     }),
@@ -337,22 +343,29 @@ export const useAppStore = create<AppState>()(
       const exists = s.currentDesign.topology.edges.some(
         (e) => e.source === edge.source && e.target === edge.target
       );
-      if (!exists) {
-        s.currentDesign.topology.edges.push(edge);
-        // Sync inputMappings on target node
-        const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
-        const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
-        if (sourceNode && targetNode) {
-          const mappingFrom = `context.${sourceNode.name}`;
-          if (!targetNode.inputMappings.some((m) => m.from === mappingFrom)) {
-            targetNode.inputMappings.push({ from: mappingFrom, to: 'input' });
-          }
-        }
-        // Regenerate outputMappings for source node
-        if (sourceNode) {
-          rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+      if (exists) return;
+      // Reject if adding this edge would create a cycle
+      if (wouldCreateCycle(s.currentDesign.topology.edges, edge.source, edge.target)) return;
+
+      s.currentDesign.topology.edges.push(edge);
+      // Sync inputMappings on target node
+      const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
+      const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
+      if (sourceNode && targetNode) {
+        const mappingFrom = `context.${sourceNode.name}`;
+        if (!targetNode.inputMappings.some((m) => m.from === mappingFrom)) {
+          targetNode.inputMappings.push({ from: mappingFrom, to: 'input' });
         }
       }
+      // Regenerate outputMappings for source node
+      if (sourceNode) {
+        rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+      }
+      // Recompute parallel groups
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
     }),
     removeEdge: (edgeId) => set((s) => {
       if (!s.currentDesign) return;
@@ -370,6 +383,11 @@ export const useAppStore = create<AppState>()(
         if (sourceNode) {
           rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
         }
+        // Recompute parallel groups
+        s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+          s.currentDesign.topology.nodes,
+          s.currentDesign.topology.edges,
+        );
       }
     }),
 

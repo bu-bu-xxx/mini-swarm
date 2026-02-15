@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { callLLMForJSON } from '../llm/openrouter';
+import { identifyParallelGroups } from '../../utils/topology';
 import type { SwarmDesign, TodoItem, AgentNode, PipelineEdge, MCPToolInfo } from '../../types';
 
 interface DesignOptions {
@@ -160,51 +161,6 @@ Design tips:
     todos,
     topology: { nodes, edges, parallelGroups },
   };
-}
-
-function identifyParallelGroups(nodes: AgentNode[], edges: PipelineEdge[]): string[][] {
-  // Find nodes with no incoming edges (roots)
-  const incomingCount = new Map<string, number>();
-  for (const node of nodes) {
-    incomingCount.set(node.id, 0);
-  }
-  for (const edge of edges) {
-    incomingCount.set(edge.target, (incomingCount.get(edge.target) || 0) + 1);
-  }
-
-  // Group by topological level
-  const levels: string[][] = [];
-  const visited = new Set<string>();
-  let currentLevel = nodes.filter((n) => (incomingCount.get(n.id) || 0) === 0).map((n) => n.id);
-
-  while (currentLevel.length > 0) {
-    levels.push([...currentLevel]);
-    for (const id of currentLevel) visited.add(id);
-
-    const nextLevel: string[] = [];
-    for (const edge of edges) {
-      if (visited.has(edge.source) && !visited.has(edge.target)) {
-        // Check if all incoming edges are from visited nodes
-        const allIncomingVisited = edges
-          .filter((e) => e.target === edge.target)
-          .every((e) => visited.has(e.source));
-        if (allIncomingVisited && !nextLevel.includes(edge.target)) {
-          nextLevel.push(edge.target);
-        }
-      }
-    }
-    currentLevel = nextLevel;
-  }
-
-  // Also add any orphan nodes not yet visited
-  for (const node of nodes) {
-    if (!visited.has(node.id)) {
-      levels.push([node.id]);
-      visited.add(node.id);
-    }
-  }
-
-  return levels.filter((l) => l.length > 0);
 }
 
 interface RefineOptions {
