@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
-const BUILT_IN_TOOLS = ['context_read', 'context_write', 'file_read', 'file_write'];
+const BUILT_IN_TOOLS = ['file_read', 'file_write'];
 
 export default function AgentDrawer() {
   const selectedNodeId = useAppStore((s) => s.selectedNodeId);
@@ -45,12 +45,7 @@ export default function AgentDrawer() {
 
   const handleSaveName = () => {
     const newName = nameDraft.trim() || node.name;
-    updateAgent(node.id, {
-      name: newName,
-      outputMappings: node.outputMappings.map((m) =>
-        m.to === `context.${node.name}` ? { ...m, to: `context.${newName}` } : m
-      ),
-    });
+    updateAgent(node.id, { name: newName });
     setEditingName(false);
   };
 
