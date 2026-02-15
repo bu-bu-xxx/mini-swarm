@@ -221,6 +221,18 @@ export default function FileManager() {
     }
   }, [refreshWorkspaceFiles, setPreviewFile]);
 
+  const handleClearOutputs = useCallback(async () => {
+    try {
+      await opfsService.clearOutputs();
+      await refreshOutputFiles();
+      if (previewFile?.source === 'outputs') {
+        setPreviewFile(null);
+      }
+    } catch {
+      // clear failed
+    }
+  }, [refreshOutputFiles, previewFile, setPreviewFile]);
+
   const handleDownloadZip = useCallback(async (source: 'workspace' | 'outputs') => {
     try {
       const files = source === 'workspace'
@@ -335,14 +347,24 @@ export default function FileManager() {
             <span className={`inline-block transition-transform ${outputsCollapsed ? '' : 'rotate-90'}`}>▶</span>
             {' '}Saved Outputs ({outputFiles.length})
           </h3>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDownloadZip('outputs'); }}
-            disabled={outputFiles.length === 0}
-            className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
-            title="Download as ZIP"
-          >
-            📦
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownloadZip('outputs'); }}
+              disabled={outputFiles.length === 0}
+              className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
+              title="Download as ZIP"
+            >
+              📦
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleClearOutputs(); }}
+              disabled={outputFiles.length === 0}
+              className="text-xs text-red-400 hover:text-red-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
+              title="Clear all outputs"
+            >
+              🗑
+            </button>
+          </div>
         </div>
         {!outputsCollapsed && (
           <div className="border border-slate-700 rounded p-1">
