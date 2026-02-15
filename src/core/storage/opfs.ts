@@ -195,7 +195,7 @@ export class OPFSService {
 
     const wsDir = await this.root!.getDirectoryHandle('workspace');
     const parentDir = await this.navigateTo(wsDir, normalized);
-    const fileName = await getFileName(normalized);
+    const fileName = getFileName(normalized);
     const fileHandle = await parentDir.getFileHandle(fileName);
     const file = await fileHandle.getFile();
     return file.text();
@@ -213,7 +213,7 @@ export class OPFSService {
 
     const wsDir = await this.root!.getDirectoryHandle('workspace');
     const parentDir = await ensureParentDirs(wsDir, normalized);
-    const fileName = await getFileName(normalized);
+    const fileName = getFileName(normalized);
     const fileHandle = await parentDir.getFileHandle(fileName, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(content);
@@ -232,7 +232,7 @@ export class OPFSService {
 
     const wsDir = await this.root!.getDirectoryHandle('workspace');
     const parentDir = await this.navigateTo(wsDir, normalized);
-    const fileName = await getFileName(normalized);
+    const fileName = getFileName(normalized);
     await parentDir.removeEntry(fileName);
   }
 
@@ -281,7 +281,7 @@ export class OPFSService {
     try {
       const wsDir = await this.root!.getDirectoryHandle('workspace');
       const parentDir = await this.navigateTo(wsDir, normalized);
-      const fileName = await getFileName(normalized);
+      const fileName = getFileName(normalized);
       await parentDir.getFileHandle(fileName);
       return true;
     } catch {
