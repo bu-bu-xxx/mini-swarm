@@ -265,7 +265,7 @@ export default function AgentDrawer() {
                 <label className="text-xs text-slate-400 w-24">Temperature</label>
                 <input
                   type="number"
-                  min="0"
+                  min="-1"
                   max="2"
                   step="0.1"
                   value={node.temperature ?? ''}
@@ -278,7 +278,7 @@ export default function AgentDrawer() {
                 <label className="text-xs text-slate-400 w-24">Max Tokens</label>
                 <input
                   type="number"
-                  min="256"
+                  min="-1"
                   max="128000"
                   step="256"
                   value={node.maxTokens ?? ''}
@@ -300,7 +300,7 @@ export default function AgentDrawer() {
                   className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
-              <p className="text-xs text-slate-500">Leave empty to use global defaults.</p>
+              <p className="text-xs text-slate-500">Leave empty to use global defaults. Set -1 to omit from API request.</p>
             </div>
           </section>
 

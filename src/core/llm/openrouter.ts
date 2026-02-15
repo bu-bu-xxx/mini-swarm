@@ -15,7 +15,7 @@ export interface LLMRequestOptions {
 }
 
 export async function callLLM(options: LLMRequestOptions): Promise<LLMResponse> {
-  const { messages, model, apiKey, temperature = 0.7, maxTokens = 4096, responseFormat, onStream, tools } = options;
+  const { messages, model, apiKey, temperature, maxTokens, responseFormat, onStream, tools } = options;
 
   const body: Record<string, unknown> = {
     model,
@@ -31,10 +31,16 @@ export async function callLLM(options: LLMRequestOptions): Promise<LLMResponse> 
       }
       return msg;
     }),
-    temperature,
-    max_tokens: maxTokens,
     stream: !tools ? !!onStream : false, // Disable streaming when using tools for reliable parsing
   };
+
+  // Only include temperature and max_tokens if explicitly provided
+  if (temperature !== undefined) {
+    body.temperature = temperature;
+  }
+  if (maxTokens !== undefined) {
+    body.max_tokens = maxTokens;
+  }
 
   if (responseFormat) {
     body.response_format = responseFormat;

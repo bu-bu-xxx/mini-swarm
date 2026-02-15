@@ -98,9 +98,12 @@ export class PipelineEngine {
       await this.checkPause();
 
       // Resolve parameters with layered priority: agent > global > hardcoded
-      const temperature = node.temperature ?? this.agentDefaults.temperature ?? 0.7;
-      const maxTokens = node.maxTokens ?? this.agentDefaults.maxTokens ?? 4096;
+      // A value of -1 means "omit this parameter" (use provider defaults)
+      const rawTemperature = node.temperature ?? this.agentDefaults.temperature ?? 0.7;
+      const rawMaxTokens = node.maxTokens ?? this.agentDefaults.maxTokens ?? 4096;
       const maxIterations = node.maxIterations ?? this.agentDefaults.maxIterations ?? 10;
+      const temperature = rawTemperature === -1 ? undefined : rawTemperature;
+      const maxTokens = rawMaxTokens === -1 ? undefined : rawMaxTokens;
 
       // Build tool schemas for this agent
       const toolSchemas = getToolSchemasForAgent(node.tools);

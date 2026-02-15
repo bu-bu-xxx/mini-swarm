@@ -209,10 +209,10 @@ export default function SettingsDrawer() {
           <h3 className="text-sm font-medium text-slate-300 mb-3">Agent Defaults</h3>
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Temperature (0-2)</label>
+              <label className="text-xs text-slate-400 mb-1 block">Temperature (0-2, or -1 to omit)</label>
               <input
                 type="number"
-                min="0"
+                min="-1"
                 max="2"
                 step="0.1"
                 value={settings.agentDefaults.temperature}
@@ -221,10 +221,10 @@ export default function SettingsDrawer() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Max Tokens</label>
+              <label className="text-xs text-slate-400 mb-1 block">Max Tokens (-1 to omit)</label>
               <input
                 type="number"
-                min="256"
+                min="-1"
                 max="128000"
                 step="256"
                 value={settings.agentDefaults.maxTokens}
@@ -244,6 +244,7 @@ export default function SettingsDrawer() {
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
+            <p className="text-xs text-slate-500">Set -1 to omit the parameter from the API request (use provider defaults).</p>
           </div>
         </section>
 
