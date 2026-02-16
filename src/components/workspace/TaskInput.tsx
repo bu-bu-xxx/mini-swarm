@@ -1,12 +1,65 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../../store';
-import { designSwarm, refineSwarm } from '../../core/designer/designer';
+import { designSwarm, refineSwarm, DEFAULT_DESIGN_SYSTEM_PROMPT, DEFAULT_REFINE_SYSTEM_PROMPT } from '../../core/designer/designer';
 import { mcpManager } from '../../core/mcp/client';
 import { AVAILABLE_MODELS } from '../../core/llm/openrouter';
+
+function PromptEditorModal({
+  title,
+  value,
+  defaultValue,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  value: string;
+  defaultValue: string;
+  onSave: (v: string) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState(value || defaultValue);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-2xl w-[600px] max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDraft(defaultValue)}
+              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+            >
+              Reset
+            </button>
+            <button
+              onClick={() => { onSave(draft); onClose(); }}
+              className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded transition"
+            >
+              Save
+            </button>
+            <button
+              onClick={onClose}
+              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="flex-1 m-3 p-3 bg-slate-900 border border-slate-600 rounded-lg text-white text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[300px]"
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function TaskInput() {
   const [task, setTask] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
+  const [showDesignPrompt, setShowDesignPrompt] = useState(false);
+  const [showRefinePrompt, setShowRefinePrompt] = useState(false);
   const {
     settings,
     setSelectedModel,
@@ -20,6 +73,10 @@ export default function TaskInput() {
     clearContext,
     initNodeStates,
     setExecutionStatus,
+    designSystemPrompt,
+    setDesignSystemPrompt,
+    refineSystemPrompt,
+    setRefineSystemPrompt,
   } = useAppStore();
 
   const activeProvider = settings.activeProvider;
@@ -51,6 +108,7 @@ export default function TaskInput() {
         apiKey: providerSettings.apiKey,
         model: providerSettings.selectedModel,
         availableTools: mcpManager.getAvailableTools(),
+        systemPrompt: designSystemPrompt || undefined,
         onProgress: (msg) => setDesignProgress(msg),
       });
 
@@ -62,7 +120,7 @@ export default function TaskInput() {
     } finally {
       setIsDesigning(false);
     }
-  }, [task, providerSettings.apiKey, providerSettings.selectedModel, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
+  }, [task, providerSettings.apiKey, providerSettings.selectedModel, designSystemPrompt, setIsDesigning, setDesignProgress, clearLogs, clearContext, setExecutionStatus, setCurrentDesign, initNodeStates]);
 
   const handleRefine = useCallback(async () => {
     if (!refinePrompt.trim() || !providerSettings.apiKey || !currentDesign) return;
@@ -77,6 +135,7 @@ export default function TaskInput() {
         apiKey: providerSettings.apiKey,
         model: providerSettings.selectedModel,
         availableTools: mcpManager.getAvailableTools(),
+        systemPrompt: refineSystemPrompt || undefined,
         onProgress: (msg) => setDesignProgress(msg),
       });
 
@@ -89,11 +148,20 @@ export default function TaskInput() {
     } finally {
       setIsDesigning(false);
     }
-  }, [refinePrompt, providerSettings.apiKey, providerSettings.selectedModel, currentDesign, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
+  }, [refinePrompt, providerSettings.apiKey, providerSettings.selectedModel, currentDesign, refineSystemPrompt, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
 
   return (
     <div className="p-3 space-y-3">
-      <h3 className="text-sm font-semibold text-slate-400 uppercase">Task</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-400 uppercase">Task</h3>
+        <button
+          onClick={() => setShowDesignPrompt(true)}
+          className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+          title="View/edit design system prompt"
+        >
+          📝 Prompt
+        </button>
+      </div>
 
       <textarea
         value={task}
@@ -127,7 +195,16 @@ export default function TaskInput() {
       {/* Refine Pipeline Section */}
       {currentDesign && !isDesigning && (
         <div className="pt-2 border-t border-slate-700 space-y-2">
-          <h3 className="text-sm font-semibold text-slate-400 uppercase">Refine Pipeline</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase">Refine Pipeline</h3>
+            <button
+              onClick={() => setShowRefinePrompt(true)}
+              className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+              title="View/edit refine system prompt"
+            >
+              📝 Prompt
+            </button>
+          </div>
           <textarea
             value={refinePrompt}
             onChange={(e) => setRefinePrompt(e.target.value)}
@@ -147,6 +224,26 @@ export default function TaskInput() {
 
       {isDesigning && designProgress && (
         <div className="text-xs text-purple-400 animate-pulse">{designProgress}</div>
+      )}
+
+      {showDesignPrompt && (
+        <PromptEditorModal
+          title="Design System Prompt"
+          value={designSystemPrompt}
+          defaultValue={DEFAULT_DESIGN_SYSTEM_PROMPT}
+          onSave={setDesignSystemPrompt}
+          onClose={() => setShowDesignPrompt(false)}
+        />
+      )}
+
+      {showRefinePrompt && (
+        <PromptEditorModal
+          title="Refine System Prompt"
+          value={refineSystemPrompt}
+          defaultValue={DEFAULT_REFINE_SYSTEM_PROMPT}
+          onSave={setRefineSystemPrompt}
+          onClose={() => setShowRefinePrompt(false)}
+        />
       )}
     </div>
   );

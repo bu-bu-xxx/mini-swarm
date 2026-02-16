@@ -92,6 +92,12 @@ interface AppState {
   refreshOutputFiles: () => Promise<void>;
   previewFile: { name: string; content: string; source: 'workspace' | 'outputs' } | null;
   setPreviewFile: (file: { name: string; content: string; source: 'workspace' | 'outputs' } | null) => void;
+
+  // System Prompts
+  designSystemPrompt: string;
+  setDesignSystemPrompt: (prompt: string) => void;
+  refineSystemPrompt: string;
+  setRefineSystemPrompt: (prompt: string) => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -454,5 +460,11 @@ export const useAppStore = create<AppState>()(
     },
     previewFile: null,
     setPreviewFile: (file) => set((s) => { s.previewFile = file; }),
+
+    // System Prompts
+    designSystemPrompt: '',
+    setDesignSystemPrompt: (prompt) => set((s) => { s.designSystemPrompt = prompt; }),
+    refineSystemPrompt: '',
+    setRefineSystemPrompt: (prompt) => set((s) => { s.refineSystemPrompt = prompt; }),
   }))
 );

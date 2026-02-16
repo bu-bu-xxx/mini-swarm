@@ -3,50 +3,13 @@ import { callLLMForJSON } from '../llm/openrouter';
 import { identifyParallelGroups } from '../../utils/topology';
 import type { SwarmDesign, TodoItem, AgentNode, PipelineEdge, MCPToolInfo } from '../../types';
 
-interface DesignOptions {
-  task: string;
-  apiKey: string;
-  model: string;
-  availableTools: MCPToolInfo[];
-  onProgress?: (message: string) => void;
-}
-
-interface LLMDesignResponse {
-  todos: {
-    description: string;
-    dependencies: string[];
-    parallelizable: boolean;
-  }[];
-  agents: {
-    name: string;
-    role: string;
-    skill: string;
-    tools: string[];
-    todoIndices: number[];
-    dependsOn: string[];
-  }[];
-}
-
-export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> {
-  const { task, apiKey, model, availableTools, onProgress } = options;
-
-  onProgress?.('Analyzing task complexity...');
-
-  const toolDescriptions = availableTools.length > 0
-    ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
-
-  const designResult = await callLLMForJSON<LLMDesignResponse>({
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert multi-agent system designer. Given a task description, you must:
+export const DEFAULT_DESIGN_SYSTEM_PROMPT = `You are an expert multi-agent system designer. Given a task description, you must:
 1. Break it down into a todo list with dependencies
 2. Design a team of AI agents to accomplish the todos
 3. Define each agent's role and skill description
 
 Available external tools:
-${toolDescriptions}
+{{toolDescriptions}}
 
 Built-in tools always available: file_read, file_write, file_list, file_delete
 
@@ -75,7 +38,86 @@ Design tips:
 - Identify tasks that can run in parallel
 - Each agent should have a clear, focused responsibility
 - Create 2-6 agents depending on task complexity
-- Simple tasks may only need 2 agents, complex ones need more`,
+- Simple tasks may only need 2 agents, complex ones need more`;
+
+export const DEFAULT_REFINE_SYSTEM_PROMPT = `You are an expert multi-agent system designer. You are given an existing multi-agent swarm design and a user request to modify it.
+
+Current design:
+{{currentDesignJSON}}
+
+Available external tools:
+{{toolDescriptions}}
+
+Built-in tools always available: file_read, file_write, file_list, file_delete
+
+Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
+{
+  "todos": [
+    {
+      "description": "string - what needs to be done",
+      "dependencies": ["string[] - descriptions of todos this depends on, empty for first tasks"],
+      "parallelizable": true/false
+    }
+  ],
+  "agents": [
+    {
+      "name": "string - short agent name like 'Researcher' or 'Writer'",
+      "role": "string - one of: researcher, coder, reviewer, coordinator, writer, analyst",
+      "skill": "string - detailed system prompt describing the agent's capabilities and instructions",
+      "tools": ["string[] - tool names this agent needs"],
+      "todoIndices": [0, 1],
+      "dependsOn": ["string[] - names of agents this depends on"]
+    }
+  ]
+}
+
+Important:
+- Incorporate the user's requested changes
+- Keep unchanged parts as they are
+- Output the COMPLETE design, not just the changes`;
+
+interface DesignOptions {
+  task: string;
+  apiKey: string;
+  model: string;
+  availableTools: MCPToolInfo[];
+  systemPrompt?: string;
+  onProgress?: (message: string) => void;
+}
+
+interface LLMDesignResponse {
+  todos: {
+    description: string;
+    dependencies: string[];
+    parallelizable: boolean;
+  }[];
+  agents: {
+    name: string;
+    role: string;
+    skill: string;
+    tools: string[];
+    todoIndices: number[];
+    dependsOn: string[];
+  }[];
+}
+
+export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> {
+  const { task, apiKey, model, availableTools, systemPrompt, onProgress } = options;
+
+  onProgress?.('Analyzing task complexity...');
+
+  const toolDescriptions = availableTools.length > 0
+    ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
+
+  const resolvedSystemPrompt = (systemPrompt || DEFAULT_DESIGN_SYSTEM_PROMPT)
+    .replace('{{toolDescriptions}}', toolDescriptions);
+
+  const designResult = await callLLMForJSON<LLMDesignResponse>({
+    messages: [
+      {
+        role: 'system',
+        content: resolvedSystemPrompt,
       },
       {
         role: 'user',
@@ -169,11 +211,12 @@ interface RefineOptions {
   apiKey: string;
   model: string;
   availableTools: MCPToolInfo[];
+  systemPrompt?: string;
   onProgress?: (message: string) => void;
 }
 
 export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> {
-  const { currentDesign, refinementPrompt, apiKey, model, availableTools, onProgress } = options;
+  const { currentDesign, refinementPrompt, apiKey, model, availableTools, systemPrompt, onProgress } = options;
 
   onProgress?.('Analyzing refinement request...');
 
@@ -198,45 +241,15 @@ export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> 
     })),
   }, null, 2);
 
+  const resolvedSystemPrompt = (systemPrompt || DEFAULT_REFINE_SYSTEM_PROMPT)
+    .replace('{{currentDesignJSON}}', currentDesignJSON)
+    .replace('{{toolDescriptions}}', toolDescriptions);
+
   const designResult = await callLLMForJSON<LLMDesignResponse>({
     messages: [
       {
         role: 'system',
-        content: `You are an expert multi-agent system designer. You are given an existing multi-agent swarm design and a user request to modify it.
-
-Current design:
-${currentDesignJSON}
-
-Available external tools:
-${toolDescriptions}
-
-Built-in tools always available: file_read, file_write, file_list, file_delete
-
-Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
-{
-  "todos": [
-    {
-      "description": "string - what needs to be done",
-      "dependencies": ["string[] - descriptions of todos this depends on, empty for first tasks"],
-      "parallelizable": true/false
-    }
-  ],
-  "agents": [
-    {
-      "name": "string - short agent name like 'Researcher' or 'Writer'",
-      "role": "string - one of: researcher, coder, reviewer, coordinator, writer, analyst",
-      "skill": "string - detailed system prompt describing the agent's capabilities and instructions",
-      "tools": ["string[] - tool names this agent needs"],
-      "todoIndices": [0, 1],
-      "dependsOn": ["string[] - names of agents this depends on"]
-    }
-  ]
-}
-
-Important:
-- Incorporate the user's requested changes
-- Keep unchanged parts as they are
-- Output the COMPLETE design, not just the changes`,
+        content: resolvedSystemPrompt,
       },
       {
         role: 'user',
