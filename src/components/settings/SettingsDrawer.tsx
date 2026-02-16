@@ -32,14 +32,14 @@ export default function SettingsDrawer() {
   const [maxTokStr, setMaxTokStr] = useState(String(settings.agentDefaults.maxTokens));
   const [maxIterStr, setMaxIterStr] = useState(String(settings.agentDefaults.maxIterations));
 
-  // Sync local buffers when drawer opens
+  // Sync local buffers when drawer opens or external values change
   useEffect(() => {
     if (settingsOpen) {
       setTempStr(String(settings.agentDefaults.temperature));
       setMaxTokStr(String(settings.agentDefaults.maxTokens));
       setMaxIterStr(String(settings.agentDefaults.maxIterations));
     }
-  }, [settingsOpen]);
+  }, [settingsOpen, settings.agentDefaults.temperature, settings.agentDefaults.maxTokens, settings.agentDefaults.maxIterations]);
 
   const activeProvider = settings.activeProvider;
   const providerSettings = settings.providers[activeProvider] || {
