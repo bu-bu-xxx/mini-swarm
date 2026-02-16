@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
 import { AVAILABLE_MODELS, testOpenRouterApiKey } from '../../core/llm/openrouter';
@@ -26,6 +26,20 @@ export default function SettingsDrawer() {
   const [mcpToken, setMcpToken] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [customModelName, setCustomModelName] = useState('');
+
+  // Local string buffers for agent default inputs (allows typing "-" without resetting)
+  const [tempStr, setTempStr] = useState(String(settings.agentDefaults.temperature));
+  const [maxTokStr, setMaxTokStr] = useState(String(settings.agentDefaults.maxTokens));
+  const [maxIterStr, setMaxIterStr] = useState(String(settings.agentDefaults.maxIterations));
+
+  // Sync local buffers when drawer opens
+  useEffect(() => {
+    if (settingsOpen) {
+      setTempStr(String(settings.agentDefaults.temperature));
+      setMaxTokStr(String(settings.agentDefaults.maxTokens));
+      setMaxIterStr(String(settings.agentDefaults.maxIterations));
+    }
+  }, [settingsOpen]);
 
   const activeProvider = settings.activeProvider;
   const providerSettings = settings.providers[activeProvider] || {
@@ -215,8 +229,9 @@ export default function SettingsDrawer() {
                 min="-1"
                 max="2"
                 step="0.1"
-                value={settings.agentDefaults.temperature}
-                onChange={(e) => setAgentDefaults({ temperature: Number(e.target.value) })}
+                value={tempStr}
+                onChange={(e) => setTempStr(e.target.value)}
+                onBlur={() => { const v = Number(tempStr); if (!isNaN(v)) setAgentDefaults({ temperature: v }); else setTempStr(String(settings.agentDefaults.temperature)); }}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
@@ -227,8 +242,9 @@ export default function SettingsDrawer() {
                 min="-1"
                 max="128000"
                 step="256"
-                value={settings.agentDefaults.maxTokens}
-                onChange={(e) => setAgentDefaults({ maxTokens: Number(e.target.value) })}
+                value={maxTokStr}
+                onChange={(e) => setMaxTokStr(e.target.value)}
+                onBlur={() => { const v = Number(maxTokStr); if (!isNaN(v)) setAgentDefaults({ maxTokens: v }); else setMaxTokStr(String(settings.agentDefaults.maxTokens)); }}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
@@ -239,8 +255,9 @@ export default function SettingsDrawer() {
                 min="1"
                 max="50"
                 step="1"
-                value={settings.agentDefaults.maxIterations}
-                onChange={(e) => setAgentDefaults({ maxIterations: Number(e.target.value) })}
+                value={maxIterStr}
+                onChange={(e) => setMaxIterStr(e.target.value)}
+                onBlur={() => { const v = Number(maxIterStr); if (!isNaN(v)) setAgentDefaults({ maxIterations: v }); else setMaxIterStr(String(settings.agentDefaults.maxIterations)); }}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>

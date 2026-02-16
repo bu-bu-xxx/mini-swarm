@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
@@ -19,6 +19,20 @@ export default function AgentDrawer() {
   const [nameDraft, setNameDraft] = useState('');
   const [showAddTool, setShowAddTool] = useState(false);
   const [customToolName, setCustomToolName] = useState('');
+
+  // Local string buffers for per-agent parameter inputs (allows typing "-" without resetting)
+  const [agTempStr, setAgTempStr] = useState(node?.temperature != null ? String(node.temperature) : '');
+  const [agMaxTokStr, setAgMaxTokStr] = useState(node?.maxTokens != null ? String(node.maxTokens) : '');
+  const [agMaxIterStr, setAgMaxIterStr] = useState(node?.maxIterations != null ? String(node.maxIterations) : '');
+
+  // Reset local buffers when selected node changes
+  useEffect(() => {
+    if (node) {
+      setAgTempStr(node.temperature != null ? String(node.temperature) : '');
+      setAgMaxTokStr(node.maxTokens != null ? String(node.maxTokens) : '');
+      setAgMaxIterStr(node.maxIterations != null ? String(node.maxIterations) : '');
+    }
+  }, [selectedNodeId]);
 
   if (!selectedNodeId || !currentDesign) return null;
 
@@ -268,9 +282,10 @@ export default function AgentDrawer() {
                   min="-1"
                   max="2"
                   step="0.1"
-                  value={node.temperature ?? ''}
+                  value={agTempStr}
                   placeholder="default"
-                  onChange={(e) => updateAgent(node.id, { temperature: e.target.value ? Number(e.target.value) : undefined })}
+                  onChange={(e) => setAgTempStr(e.target.value)}
+                  onBlur={() => { if (!agTempStr) updateAgent(node.id, { temperature: undefined }); else { const v = Number(agTempStr); if (!isNaN(v)) updateAgent(node.id, { temperature: v }); else setAgTempStr(node.temperature != null ? String(node.temperature) : ''); } }}
                   className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
@@ -281,9 +296,10 @@ export default function AgentDrawer() {
                   min="-1"
                   max="128000"
                   step="256"
-                  value={node.maxTokens ?? ''}
+                  value={agMaxTokStr}
                   placeholder="default"
-                  onChange={(e) => updateAgent(node.id, { maxTokens: e.target.value ? Number(e.target.value) : undefined })}
+                  onChange={(e) => setAgMaxTokStr(e.target.value)}
+                  onBlur={() => { if (!agMaxTokStr) updateAgent(node.id, { maxTokens: undefined }); else { const v = Number(agMaxTokStr); if (!isNaN(v)) updateAgent(node.id, { maxTokens: v }); else setAgMaxTokStr(node.maxTokens != null ? String(node.maxTokens) : ''); } }}
                   className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
@@ -294,9 +310,10 @@ export default function AgentDrawer() {
                   min="1"
                   max="50"
                   step="1"
-                  value={node.maxIterations ?? ''}
+                  value={agMaxIterStr}
                   placeholder="default"
-                  onChange={(e) => updateAgent(node.id, { maxIterations: e.target.value ? Number(e.target.value) : undefined })}
+                  onChange={(e) => setAgMaxIterStr(e.target.value)}
+                  onBlur={() => { if (!agMaxIterStr) updateAgent(node.id, { maxIterations: undefined }); else { const v = Number(agMaxIterStr); if (!isNaN(v)) updateAgent(node.id, { maxIterations: v }); else setAgMaxIterStr(node.maxIterations != null ? String(node.maxIterations) : ''); } }}
                   className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
