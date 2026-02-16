@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { callLLMForJSON } from '../llm/openrouter';
+import { identifyParallelGroups } from '../../utils/topology';
 import type { SwarmDesign, TodoItem, AgentNode, PipelineEdge, MCPToolInfo } from '../../types';
 
 interface DesignOptions {
@@ -33,7 +34,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
 
   const designResult = await callLLMForJSON<LLMDesignResponse>({
     messages: [
@@ -47,7 +48,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: file_read, file_write
+Built-in tools always available: file_read, file_write, file_list, file_delete
 
 Respond with a JSON object with this exact structure:
 {
@@ -162,51 +163,6 @@ Design tips:
   };
 }
 
-function identifyParallelGroups(nodes: AgentNode[], edges: PipelineEdge[]): string[][] {
-  // Find nodes with no incoming edges (roots)
-  const incomingCount = new Map<string, number>();
-  for (const node of nodes) {
-    incomingCount.set(node.id, 0);
-  }
-  for (const edge of edges) {
-    incomingCount.set(edge.target, (incomingCount.get(edge.target) || 0) + 1);
-  }
-
-  // Group by topological level
-  const levels: string[][] = [];
-  const visited = new Set<string>();
-  let currentLevel = nodes.filter((n) => (incomingCount.get(n.id) || 0) === 0).map((n) => n.id);
-
-  while (currentLevel.length > 0) {
-    levels.push([...currentLevel]);
-    for (const id of currentLevel) visited.add(id);
-
-    const nextLevel: string[] = [];
-    for (const edge of edges) {
-      if (visited.has(edge.source) && !visited.has(edge.target)) {
-        // Check if all incoming edges are from visited nodes
-        const allIncomingVisited = edges
-          .filter((e) => e.target === edge.target)
-          .every((e) => visited.has(e.source));
-        if (allIncomingVisited && !nextLevel.includes(edge.target)) {
-          nextLevel.push(edge.target);
-        }
-      }
-    }
-    currentLevel = nextLevel;
-  }
-
-  // Also add any orphan nodes not yet visited
-  for (const node of nodes) {
-    if (!visited.has(node.id)) {
-      levels.push([node.id]);
-      visited.add(node.id);
-    }
-  }
-
-  return levels.filter((l) => l.length > 0);
-}
-
 interface RefineOptions {
   currentDesign: SwarmDesign;
   refinementPrompt: string;
@@ -223,7 +179,7 @@ export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
 
   const currentDesignJSON = JSON.stringify({
     taskDescription: currentDesign.taskDescription,
@@ -254,7 +210,7 @@ ${currentDesignJSON}
 Available external tools:
 ${toolDescriptions}
 
-Built-in tools always available: file_read, file_write
+Built-in tools always available: file_read, file_write, file_list, file_delete
 
 Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
 {

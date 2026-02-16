@@ -14,6 +14,8 @@ export default function ExecutionControls() {
     clearContext,
     initNodeStates,
     clearLogs,
+    refreshWorkspaceFiles,
+    refreshOutputFiles,
   } = useAppStore();
 
   const engineRef = useRef<PipelineEngine | null>(null);
@@ -42,7 +44,14 @@ export default function ExecutionControls() {
       onContextUpdate: (key, entry) => {
         setContextEntry(key, entry);
       },
-    });
+      onOutputsPersisted: () => {
+        refreshWorkspaceFiles();
+        refreshOutputFiles();
+      },
+      onWorkspaceChanged: () => {
+        refreshWorkspaceFiles();
+      },
+    }, settings.agentDefaults);
 
     engineRef.current = engine;
 
@@ -59,7 +68,7 @@ export default function ExecutionControls() {
         level: 'error',
       });
     }
-  }, [currentDesign, settings.activeProvider, settings.providers, clearLogs, clearContext, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry]);
+  }, [currentDesign, settings.activeProvider, settings.providers, settings.agentDefaults, clearLogs, clearContext, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry, refreshWorkspaceFiles, refreshOutputFiles]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'running' && engineRef.current) {

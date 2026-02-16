@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
 import { AVAILABLE_MODELS, testOpenRouterApiKey } from '../../core/llm/openrouter';
@@ -19,12 +19,27 @@ export default function SettingsDrawer() {
     addMCPServer,
     removeMCPServer,
     updateMCPServer,
+    setAgentDefaults,
   } = useAppStore();
   const [mcpName, setMcpName] = useState('');
   const [mcpUrl, setMcpUrl] = useState('');
   const [mcpToken, setMcpToken] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [customModelName, setCustomModelName] = useState('');
+
+  // Local string buffers for agent default inputs (allows typing "-" without resetting)
+  const [tempStr, setTempStr] = useState(String(settings.agentDefaults.temperature));
+  const [maxTokStr, setMaxTokStr] = useState(String(settings.agentDefaults.maxTokens));
+  const [maxIterStr, setMaxIterStr] = useState(String(settings.agentDefaults.maxIterations));
+
+  // Sync local buffers when drawer opens or external values change
+  useEffect(() => {
+    if (settingsOpen) {
+      setTempStr(String(settings.agentDefaults.temperature));
+      setMaxTokStr(String(settings.agentDefaults.maxTokens));
+      setMaxIterStr(String(settings.agentDefaults.maxIterations));
+    }
+  }, [settingsOpen, settings.agentDefaults.temperature, settings.agentDefaults.maxTokens, settings.agentDefaults.maxIterations]);
 
   const activeProvider = settings.activeProvider;
   const providerSettings = settings.providers[activeProvider] || {
@@ -200,6 +215,53 @@ export default function SettingsDrawer() {
                 </div>
               )}
             </div>
+          </div>
+        </section>
+
+        {/* Agent Defaults */}
+        <section className="mb-6">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">Agent Defaults</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Temperature (0-2, or -1 to omit)</label>
+              <input
+                type="number"
+                min="-1"
+                max="2"
+                step="0.1"
+                value={tempStr}
+                onChange={(e) => setTempStr(e.target.value)}
+                onBlur={() => { const v = Number(tempStr); if (!isNaN(v)) setAgentDefaults({ temperature: v }); else setTempStr(String(settings.agentDefaults.temperature)); }}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Max Tokens (-1 to omit)</label>
+              <input
+                type="number"
+                min="-1"
+                max="128000"
+                step="256"
+                value={maxTokStr}
+                onChange={(e) => setMaxTokStr(e.target.value)}
+                onBlur={() => { const v = Number(maxTokStr); if (!isNaN(v)) setAgentDefaults({ maxTokens: v }); else setMaxTokStr(String(settings.agentDefaults.maxTokens)); }}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Max Iterations (ReAct loop limit)</label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                value={maxIterStr}
+                onChange={(e) => setMaxIterStr(e.target.value)}
+                onBlur={() => { const v = Number(maxIterStr); if (!isNaN(v)) setAgentDefaults({ maxIterations: v }); else setMaxIterStr(String(settings.agentDefaults.maxIterations)); }}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <p className="text-xs text-slate-500">Set -1 to omit the parameter from the API request (use provider defaults).</p>
           </div>
         </section>
 

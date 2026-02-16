@@ -25,7 +25,7 @@ export default function TodoList() {
       <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">
         Todo List ({currentDesign.todos.length})
       </h3>
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 max-h-48 overflow-y-auto">
         {currentDesign.todos.map((todo) => (
           <div
             key={todo.id}

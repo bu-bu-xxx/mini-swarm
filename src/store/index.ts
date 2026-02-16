@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
+import { identifyParallelGroups, wouldCreateCycle } from '../utils/topology';
 import type {
   AppSettings,
   AppView,
   ModelProvider,
   ProviderSettings,
+  AgentDefaults,
   SwarmDesign,
   AgentNode,
   PipelineEdge,
@@ -16,6 +18,8 @@ import type {
   NodeStatus,
   MCPServerConfig,
 } from '../types';
+import type { FileEntry } from '../core/storage/opfs';
+import { opfsService } from '../core/storage/opfs';
 
 interface AppState {
   // View
@@ -34,6 +38,7 @@ interface AppState {
   addMCPServer: (server: MCPServerConfig) => void;
   removeMCPServer: (id: string) => void;
   updateMCPServer: (id: string, updates: Partial<MCPServerConfig>) => void;
+  setAgentDefaults: (defaults: Partial<AgentDefaults>) => void;
 
   // Swarm Design
   currentDesign: SwarmDesign | null;
@@ -79,6 +84,14 @@ interface AppState {
   setLeftPanelCollapsed: (collapsed: boolean) => void;
   rightPanelCollapsed: boolean;
   setRightPanelCollapsed: (collapsed: boolean) => void;
+
+  // File Manager
+  workspaceFiles: FileEntry[];
+  outputFiles: FileEntry[];
+  refreshWorkspaceFiles: () => Promise<void>;
+  refreshOutputFiles: () => Promise<void>;
+  previewFile: { name: string; content: string; source: 'workspace' | 'outputs' } | null;
+  setPreviewFile: (file: { name: string; content: string; source: 'workspace' | 'outputs' } | null) => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -90,6 +103,12 @@ const defaultProviderSettings = (): ProviderSettings => ({
   testStatus: 'idle',
   testMessage: '',
 });
+
+const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
+  temperature: 0.7,
+  maxTokens: 4096,
+  maxIterations: 10,
+};
 
 const loadSettings = (): AppSettings => {
   try {
@@ -108,9 +127,13 @@ const loadSettings = (): AppSettings => {
           },
           mcpServers: parsed.mcpServers || [],
           setupComplete: parsed.setupComplete || false,
+          agentDefaults: parsed.agentDefaults || DEFAULT_AGENT_DEFAULTS,
         };
       }
-      return parsed;
+      return {
+        ...parsed,
+        agentDefaults: parsed.agentDefaults || DEFAULT_AGENT_DEFAULTS,
+      };
     }
   } catch { /* ignore */ }
   return {
@@ -120,6 +143,7 @@ const loadSettings = (): AppSettings => {
     },
     mcpServers: [],
     setupComplete: false,
+    agentDefaults: DEFAULT_AGENT_DEFAULTS,
   };
 };
 
@@ -236,6 +260,10 @@ export const useAppStore = create<AppState>()(
         saveSettings(s.settings);
       }
     }),
+    setAgentDefaults: (defaults) => set((s) => {
+      Object.assign(s.settings.agentDefaults, defaults);
+      saveSettings(s.settings);
+    }),
 
     // Swarm Design
     currentDesign: null,
@@ -250,8 +278,11 @@ export const useAppStore = create<AppState>()(
     addAgent: (agent) => set((s) => {
       if (!s.currentDesign) return;
       s.currentDesign.topology.nodes.push(agent);
-      // New agents go into their own parallel group until connected
-      s.currentDesign.topology.parallelGroups.push([agent.id]);
+      // Recompute parallel groups from current edges
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
       // Init node state
       s.nodeStates[agent.id] = { nodeId: agent.id, status: 'idle', logs: [] };
     }),
@@ -274,9 +305,11 @@ export const useAppStore = create<AppState>()(
       for (const node of s.currentDesign.topology.nodes) {
         rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, node.id);
       }
-      s.currentDesign.topology.parallelGroups = s.currentDesign.topology.parallelGroups
-        .map((g) => g.filter((id) => id !== agentId))
-        .filter((g) => g.length > 0);
+      // Recompute parallel groups from current edges
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
       delete s.nodeStates[agentId];
       if (s.selectedNodeId === agentId) s.selectedNodeId = null;
     }),
@@ -310,22 +343,29 @@ export const useAppStore = create<AppState>()(
       const exists = s.currentDesign.topology.edges.some(
         (e) => e.source === edge.source && e.target === edge.target
       );
-      if (!exists) {
-        s.currentDesign.topology.edges.push(edge);
-        // Sync inputMappings on target node
-        const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
-        const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
-        if (sourceNode && targetNode) {
-          const mappingFrom = `context.${sourceNode.name}`;
-          if (!targetNode.inputMappings.some((m) => m.from === mappingFrom)) {
-            targetNode.inputMappings.push({ from: mappingFrom, to: 'input' });
-          }
-        }
-        // Regenerate outputMappings for source node
-        if (sourceNode) {
-          rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+      if (exists) return;
+      // Reject if adding this edge would create a cycle (silently — UI graph prevents most cases)
+      if (wouldCreateCycle(s.currentDesign.topology.edges, edge.source, edge.target)) return;
+
+      s.currentDesign.topology.edges.push(edge);
+      // Sync inputMappings on target node
+      const sourceNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.source);
+      const targetNode = s.currentDesign.topology.nodes.find((n) => n.id === edge.target);
+      if (sourceNode && targetNode) {
+        const mappingFrom = `context.${sourceNode.name}`;
+        if (!targetNode.inputMappings.some((m) => m.from === mappingFrom)) {
+          targetNode.inputMappings.push({ from: mappingFrom, to: 'input' });
         }
       }
+      // Regenerate outputMappings for source node
+      if (sourceNode) {
+        rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
+      }
+      // Recompute parallel groups
+      s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+        s.currentDesign.topology.nodes,
+        s.currentDesign.topology.edges,
+      );
     }),
     removeEdge: (edgeId) => set((s) => {
       if (!s.currentDesign) return;
@@ -343,6 +383,11 @@ export const useAppStore = create<AppState>()(
         if (sourceNode) {
           rebuildOutputMappings(s.currentDesign.topology.nodes, s.currentDesign.topology.edges, sourceNode.id);
         }
+        // Recompute parallel groups
+        s.currentDesign.topology.parallelGroups = identifyParallelGroups(
+          s.currentDesign.topology.nodes,
+          s.currentDesign.topology.edges,
+        );
       }
     }),
 
@@ -387,5 +432,27 @@ export const useAppStore = create<AppState>()(
     setLeftPanelCollapsed: (collapsed) => set((s) => { s.leftPanelCollapsed = collapsed; }),
     rightPanelCollapsed: false,
     setRightPanelCollapsed: (collapsed) => set((s) => { s.rightPanelCollapsed = collapsed; }),
+
+    // File Manager
+    workspaceFiles: [],
+    outputFiles: [],
+    refreshWorkspaceFiles: async () => {
+      try {
+        const files = await opfsService.listDirectory('.', true);
+        set((s) => { s.workspaceFiles = files; });
+      } catch {
+        set((s) => { s.workspaceFiles = []; });
+      }
+    },
+    refreshOutputFiles: async () => {
+      try {
+        const files = await opfsService.listOutputs();
+        set((s) => { s.outputFiles = files; });
+      } catch {
+        set((s) => { s.outputFiles = []; });
+      }
+    },
+    previewFile: null,
+    setPreviewFile: (file) => set((s) => { s.previewFile = file; }),
   }))
 );

@@ -3,6 +3,7 @@ import { exportDesignAsJSON, importDesignFromJSON, isValidSwarmDesign } from '..
 import TaskInput from './TaskInput';
 import ExecutionControls from './ExecutionControls';
 import ContextViewer from './ContextViewer';
+import FileManager from './FileManager';
 import PipelineGraph from '../pipeline/PipelineGraph';
 import AgentDrawer from '../pipeline/AgentDrawer';
 import EdgeDrawer from '../pipeline/EdgeDrawer';
@@ -96,6 +97,9 @@ export default function Workspace() {
           {!leftPanelCollapsed && (
             <div className="flex-1 overflow-y-auto">
               <TaskInput />
+              <div className="border-t border-slate-700">
+                <FileManager />
+              </div>
               <div className="border-t border-slate-700">
                 <TodoList />
               </div>

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
-const BUILT_IN_TOOLS = ['file_read', 'file_write'];
+const BUILT_IN_TOOLS = ['file_read', 'file_write', 'file_list', 'file_delete'];
 
 export default function AgentDrawer() {
   const selectedNodeId = useAppStore((s) => s.selectedNodeId);
@@ -20,9 +20,23 @@ export default function AgentDrawer() {
   const [showAddTool, setShowAddTool] = useState(false);
   const [customToolName, setCustomToolName] = useState('');
 
-  if (!selectedNodeId || !currentDesign) return null;
+  // Local string buffers for per-agent parameter inputs (allows typing "-" without resetting)
+  const [agTempStr, setAgTempStr] = useState('');
+  const [agMaxTokStr, setAgMaxTokStr] = useState('');
+  const [agMaxIterStr, setAgMaxIterStr] = useState('');
 
-  const node = currentDesign.topology.nodes.find((n) => n.id === selectedNodeId);
+  const node = selectedNodeId && currentDesign
+    ? currentDesign.topology.nodes.find((n) => n.id === selectedNodeId)
+    : undefined;
+
+  // Reset local buffers when selected node changes
+  useEffect(() => {
+    if (node) {
+      setAgTempStr(node.temperature != null ? String(node.temperature) : '');
+      setAgMaxTokStr(node.maxTokens != null ? String(node.maxTokens) : '');
+      setAgMaxIterStr(node.maxIterations != null ? String(node.maxIterations) : '');
+    }
+  }, [selectedNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!node) return null;
 
   const state = nodeStates[node.id];
@@ -254,6 +268,56 @@ export default function AgentDrawer() {
                   </button>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Parameters */}
+          <section>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Parameters</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Temperature</label>
+                <input
+                  type="number"
+                  min="-1"
+                  max="2"
+                  step="0.1"
+                  value={agTempStr}
+                  placeholder="default"
+                  onChange={(e) => setAgTempStr(e.target.value)}
+                  onBlur={() => { if (!agTempStr) updateAgent(node.id, { temperature: undefined }); else { const v = Number(agTempStr); if (!isNaN(v)) updateAgent(node.id, { temperature: v }); else setAgTempStr(node.temperature != null ? String(node.temperature) : ''); } }}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Max Tokens</label>
+                <input
+                  type="number"
+                  min="-1"
+                  max="128000"
+                  step="256"
+                  value={agMaxTokStr}
+                  placeholder="default"
+                  onChange={(e) => setAgMaxTokStr(e.target.value)}
+                  onBlur={() => { if (!agMaxTokStr) updateAgent(node.id, { maxTokens: undefined }); else { const v = Number(agMaxTokStr); if (!isNaN(v)) updateAgent(node.id, { maxTokens: v }); else setAgMaxTokStr(node.maxTokens != null ? String(node.maxTokens) : ''); } }}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 w-24">Max Iterations</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={agMaxIterStr}
+                  placeholder="default"
+                  onChange={(e) => setAgMaxIterStr(e.target.value)}
+                  onBlur={() => { if (!agMaxIterStr) updateAgent(node.id, { maxIterations: undefined }); else { const v = Number(agMaxIterStr); if (!isNaN(v)) updateAgent(node.id, { maxIterations: v }); else setAgMaxIterStr(node.maxIterations != null ? String(node.maxIterations) : ''); } }}
+                  className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <p className="text-xs text-slate-500">Leave empty to use global defaults. Set -1 to omit from API request.</p>
             </div>
           </section>
 
