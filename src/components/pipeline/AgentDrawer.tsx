@@ -21,9 +21,13 @@ export default function AgentDrawer() {
   const [customToolName, setCustomToolName] = useState('');
 
   // Local string buffers for per-agent parameter inputs (allows typing "-" without resetting)
-  const [agTempStr, setAgTempStr] = useState(node?.temperature != null ? String(node.temperature) : '');
-  const [agMaxTokStr, setAgMaxTokStr] = useState(node?.maxTokens != null ? String(node.maxTokens) : '');
-  const [agMaxIterStr, setAgMaxIterStr] = useState(node?.maxIterations != null ? String(node.maxIterations) : '');
+  const [agTempStr, setAgTempStr] = useState('');
+  const [agMaxTokStr, setAgMaxTokStr] = useState('');
+  const [agMaxIterStr, setAgMaxIterStr] = useState('');
+
+  const node = selectedNodeId && currentDesign
+    ? currentDesign.topology.nodes.find((n) => n.id === selectedNodeId)
+    : undefined;
 
   // Reset local buffers when selected node changes
   useEffect(() => {
@@ -32,11 +36,7 @@ export default function AgentDrawer() {
       setAgMaxTokStr(node.maxTokens != null ? String(node.maxTokens) : '');
       setAgMaxIterStr(node.maxIterations != null ? String(node.maxIterations) : '');
     }
-  }, [selectedNodeId]);
-
-  if (!selectedNodeId || !currentDesign) return null;
-
-  const node = currentDesign.topology.nodes.find((n) => n.id === selectedNodeId);
+  }, [selectedNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!node) return null;
 
   const state = nodeStates[node.id];
