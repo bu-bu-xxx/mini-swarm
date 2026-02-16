@@ -54,7 +54,7 @@ export default function Workspace() {
     <div className="h-screen flex flex-col bg-slate-900 text-white">
       {/* Top Bar */}
       <header className="h-10 bg-slate-800 border-b border-slate-700 flex items-center px-4 shrink-0">
-        <span className="font-semibold text-sm">🐝 AutoSwarm Designer</span>
+        <span className="font-semibold text-sm">🐝 MiniSwarm Designer</span>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">

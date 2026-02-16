@@ -94,7 +94,7 @@ export default function SetupPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 max-w-lg w-full border border-slate-700">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🐝 AutoSwarm Designer</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">🐝 MiniSwarm Designer</h1>
           <p className="text-slate-400">Automated Agent Swarm Design & Visualization</p>
         </div>
 
