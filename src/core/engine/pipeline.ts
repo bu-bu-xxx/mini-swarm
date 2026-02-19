@@ -315,6 +315,7 @@ ${Array.from(this.context.keys()).filter(k => !k.startsWith('__')).join(', ') ||
       });
     } catch {
       // ignore non-JSON tool output
+      console.debug('webpage_build_preview_tool returned non-JSON output');
     }
   }
 

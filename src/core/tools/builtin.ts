@@ -198,7 +198,7 @@ export async function executeBuiltinTool(
 
     case 'python_workspace_tool': {
       const code = String(args.code || '');
-      if (!code.trim()) return 'Error: code is required';
+      if (!code.trim()) return 'Error: Python code parameter is required';
       try {
         await pythonWorkspaceRunner.init();
         const result = await pythonWorkspaceRunner.run(code);
@@ -284,7 +284,7 @@ class PythonWorkspaceRunner {
     }
 
     await this.syncWorkspaceToPython();
-    const escapedCode = JSON.stringify(code);
+    const serializedCode = JSON.stringify(code);
     const rawResult = await this.pyodide.runPythonAsync(`
 import builtins
 import io
@@ -360,7 +360,7 @@ os.listdir = _safe_listdir
 os.scandir = _safe_scandir
 os.stat = _safe_stat
 
-_code = ${escapedCode}
+_code = ${serializedCode}
 _stdout = io.StringIO()
 _stderr = io.StringIO()
 _old_stdout, _old_stderr = __import__('sys').stdout, __import__('sys').stderr
@@ -509,6 +509,9 @@ function resolveRelativePath(basePath: string, relativePath: string): string {
   for (const part of relParts) {
     if (!part || part === '.') continue;
     if (part === '..') {
+      if (stack.length === 0) {
+        throw new Error(`Path escapes workspace root: ${relativePath}`);
+      }
       stack.pop();
     } else {
       stack.push(part);
@@ -554,7 +557,7 @@ async function buildWorkspacePagePreview(entryPathArg: string, titleArg: string)
       styleEl.textContent = cssContent;
       link.replaceWith(styleEl);
     } catch {
-      // Keep original link if asset cannot be inlined
+      // Keep original link if asset cannot be inlined.
     }
   }
 
@@ -569,7 +572,7 @@ async function buildWorkspacePagePreview(entryPathArg: string, titleArg: string)
       script.textContent = scriptContent;
       script.setAttribute('data-inline-from', scriptPath);
     } catch {
-      // Keep original script if asset cannot be inlined
+      // Keep original script if asset cannot be inlined.
     }
   }
 
