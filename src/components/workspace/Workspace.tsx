@@ -4,6 +4,7 @@ import TaskInput from './TaskInput';
 import ExecutionControls from './ExecutionControls';
 import ContextViewer from './ContextViewer';
 import FileManager from './FileManager';
+import GeneratedPagesSidebar from './GeneratedPagesSidebar';
 import PipelineGraph from '../pipeline/PipelineGraph';
 import AgentDrawer from '../pipeline/AgentDrawer';
 import EdgeDrawer from '../pipeline/EdgeDrawer';
@@ -131,6 +132,7 @@ export default function Workspace() {
               <div className="border-t border-slate-700 max-h-48 overflow-y-auto">
                 <ContextViewer />
               </div>
+              <GeneratedPagesSidebar />
             </div>
           )}
         </div>

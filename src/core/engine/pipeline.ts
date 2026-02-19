@@ -10,6 +10,13 @@ export interface EngineCallbacks {
   onContextUpdate: (key: string, entry: ContextEntry) => void;
   onOutputsPersisted?: () => void;
   onWorkspaceChanged?: () => void;
+  onPagePreviewGenerated?: (preview: {
+    url: string;
+    entryPath: string;
+    title: string;
+    timestamp: number;
+    generatedBy: string;
+  }) => void;
 }
 
 const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
@@ -163,8 +170,11 @@ export class PipelineEngine {
           try {
             toolResult = await this.executeTool(tc.name, tc.arguments);
             // Notify UI of workspace changes for file-modifying tools
-            if (['file_write', 'file_delete'].includes(tc.name)) {
+            if (['file_write', 'file_delete', 'python_workspace_tool'].includes(tc.name)) {
               this.callbacks.onWorkspaceChanged?.();
+            }
+            if (tc.name === 'webpage_build_preview_tool') {
+              this.handlePreviewToolResult(toolResult, node.name);
             }
           } catch (err) {
             toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
@@ -284,6 +294,28 @@ ${Array.from(this.context.keys()).filter(k => !k.startsWith('__')).join(', ') ||
 
   setInternalContext(key: string, entry: ContextEntry): void {
     this.context.set(key, entry);
+  }
+
+  handlePreviewToolResult(toolResult: string, generatedBy: string): void {
+    try {
+      const parsed = JSON.parse(toolResult) as {
+        success?: boolean;
+        previewUrl?: string;
+        entryPath?: string;
+        title?: string;
+        timestamp?: number;
+      };
+      if (!parsed.success || !parsed.previewUrl || !parsed.entryPath) return;
+      this.callbacks.onPagePreviewGenerated?.({
+        url: parsed.previewUrl,
+        entryPath: parsed.entryPath,
+        title: parsed.title || parsed.entryPath,
+        timestamp: parsed.timestamp || Date.now(),
+        generatedBy,
+      });
+    } catch {
+      // ignore non-JSON tool output
+    }
   }
 
   async persistOutputs(design: SwarmDesign): Promise<void> {
