@@ -4,6 +4,16 @@ import { opfsService } from '../storage/opfs';
 import { identifyParallelGroups } from '../../utils/topology';
 import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage } from '../../types';
 
+export const DEFAULT_SUMMARY_SYSTEM_PROMPT = `You are a concise real-time summarizer for an AI agent swarm pipeline. Given the current execution state, write a brief summary of what has been accomplished.
+
+Instructions:
+- Be concise: 2-5 sentences maximum
+- Focus on concrete outcomes, not process details
+- Write in plain language that non-technical users can understand
+- Provide a COMPLETE, updated summary (not just the latest change)
+- When files have been written, briefly mention the key filenames
+- When web pages have been generated, briefly mention the page titles`;
+
 export interface EngineCallbacks {
   onNodeStatusChange: (nodeId: string, status: NodeStatus, error?: string) => void;
   onLog: (log: LogEntry) => void;
@@ -17,6 +27,9 @@ export interface EngineCallbacks {
     timestamp: number;
     generatedBy: string;
   }) => void;
+  onSummaryStart?: () => void;
+  onSummaryChunk?: (chunk: string) => void;
+  onFileWritten?: (path: string, agentName: string) => void;
 }
 
 const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
@@ -24,6 +37,9 @@ const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
   maxTokens: 4096,
   maxIterations: 10,
 };
+
+const SUMMARY_MAX_CONTEXT_VALUE_LENGTH = 600;
+const SUMMARY_MAX_TOKENS = 400;
 
 export class PipelineEngine {
   context = new Map<string, ContextEntry>();
@@ -35,18 +51,23 @@ export class PipelineEngine {
   callbacks: EngineCallbacks;
   agentDefaults: AgentDefaults;
   startedAt: number = 0;
+  summarySystemPrompt: string;
+  summaryGeneration = 0;
+  generatedPagesLog: Array<{ title: string; url: string }> = [];
 
-  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults) {
+  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults, summarySystemPrompt?: string) {
     this.apiKey = apiKey;
     this.model = model;
     this.callbacks = callbacks;
     this.agentDefaults = agentDefaults || DEFAULT_AGENT_DEFAULTS;
+    this.summarySystemPrompt = summarySystemPrompt || DEFAULT_SUMMARY_SYSTEM_PROMPT;
   }
 
   async execute(design: SwarmDesign): Promise<void> {
     this.aborted = false;
     this.paused = false;
     this.context.clear();
+    this.generatedPagesLog = [];
     this.startedAt = Date.now();
 
     // Initialize OPFS
@@ -173,6 +194,9 @@ export class PipelineEngine {
             if (['file_write', 'file_delete', 'python_workspace_tool'].includes(tc.name)) {
               this.callbacks.onWorkspaceChanged?.();
             }
+            if (tc.name === 'file_write' && typeof tc.arguments.path === 'string') {
+              this.callbacks.onFileWritten?.(tc.arguments.path, node.name);
+            }
             if (tc.name === 'webpage_build_preview_tool') {
               this.handlePreviewToolResult(toolResult, node.name);
             }
@@ -225,6 +249,8 @@ export class PipelineEngine {
 
       this.log(node, 'info', `Agent ${node.name} completed successfully`);
       this.callbacks.onNodeStatusChange(node.id, 'completed');
+      // Trigger non-blocking summary update
+      this.triggerSummaryUpdate();
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.log(node, 'error', `Agent ${node.name} failed: ${errMsg}`);
@@ -306,6 +332,7 @@ ${Array.from(this.context.keys()).filter(k => !k.startsWith('__')).join(', ') ||
         timestamp?: number;
       };
       if (!parsed.success || !parsed.previewUrl || !parsed.entryPath) return;
+      this.generatedPagesLog.push({ title: parsed.title || parsed.entryPath, url: parsed.previewUrl });
       this.callbacks.onPagePreviewGenerated?.({
         url: parsed.previewUrl,
         entryPath: parsed.entryPath,
@@ -350,6 +377,55 @@ ${Array.from(this.context.keys()).filter(k => !k.startsWith('__')).join(', ') ||
     } catch {
       // Non-critical: outputs persistence failure shouldn't break the pipeline
     }
+  }
+
+  triggerSummaryUpdate(): void {
+    if (!this.callbacks.onSummaryStart || !this.callbacks.onSummaryChunk) return;
+    const generation = ++this.summaryGeneration;
+    this._runSummaryUpdate(generation).catch(() => {});
+  }
+
+  async _runSummaryUpdate(generation: number): Promise<void> {
+    const contextEntries = Array.from(this.context.entries())
+      .filter(([k]) => !k.startsWith('__'))
+      .map(([key, entry]) => {
+        const name = key.includes('(') ? key.split('(')[0] : key;
+        const value = typeof entry.value === 'string' ? entry.value : JSON.stringify(entry.value);
+        return `**${name}**: ${value.slice(0, SUMMARY_MAX_CONTEXT_VALUE_LENGTH)}${value.length > SUMMARY_MAX_CONTEXT_VALUE_LENGTH ? '...' : ''}`;
+      });
+
+    if (contextEntries.length === 0) return;
+
+    const taskEntry = this.context.get('__task__');
+    const task = taskEntry ? String(taskEntry.value) : '';
+
+    let userMessage = `Task: ${task}\n\nAgent outputs completed so far:\n\n${contextEntries.join('\n\n')}`;
+
+    if (this.generatedPagesLog.length > 0) {
+      userMessage += `\n\nGenerated web pages:\n${this.generatedPagesLog.map((p) => `- ${p.title}: ${p.url}`).join('\n')}`;
+    }
+
+    userMessage += '\n\nPlease provide a concise summary of what has been accomplished so far.';
+
+    let started = false;
+    await callLLM({
+      messages: [
+        { role: 'system', content: this.summarySystemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      model: this.model,
+      apiKey: this.apiKey,
+      maxTokens: SUMMARY_MAX_TOKENS,
+      temperature: 0.3,
+      onStream: (chunk) => {
+        if (this.summaryGeneration !== generation) return;
+        if (!started) {
+          started = true;
+          this.callbacks.onSummaryStart?.();
+        }
+        this.callbacks.onSummaryChunk?.(chunk);
+      },
+    });
   }
 
   log(node: AgentNode, level: LogEntry['level'], message: string): void {

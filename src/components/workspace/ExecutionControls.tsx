@@ -19,6 +19,11 @@ export default function ExecutionControls() {
     clearGeneratedPages,
     refreshWorkspaceFiles,
     refreshOutputFiles,
+    clearSummaryText,
+    appendSummaryChunk,
+    summarySystemPrompt,
+    clearFilesWrittenInRun,
+    addFileWrittenInRun,
   } = useAppStore();
 
   const engineRef = useRef<PipelineEngine | null>(null);
@@ -35,6 +40,8 @@ export default function ExecutionControls() {
     clearLogs();
     clearContext();
     clearGeneratedPages();
+    clearSummaryText();
+    clearFilesWrittenInRun();
     initNodeStates(currentDesign.topology.nodes.map((n) => n.id));
     setExecutionStatus('running');
 
@@ -65,7 +72,16 @@ export default function ExecutionControls() {
           generatedBy: preview.generatedBy,
         });
       },
-    }, settings.agentDefaults);
+      onSummaryStart: () => {
+        clearSummaryText();
+      },
+      onSummaryChunk: (chunk) => {
+        appendSummaryChunk(chunk);
+      },
+      onFileWritten: (path, agentName) => {
+        addFileWrittenInRun(path, agentName);
+      },
+    }, settings.agentDefaults, summarySystemPrompt || undefined);
 
     engineRef.current = engine;
 
@@ -82,7 +98,7 @@ export default function ExecutionControls() {
         level: 'error',
       });
     }
-  }, [currentDesign, settings.activeProvider, settings.providers, settings.agentDefaults, clearLogs, clearContext, clearGeneratedPages, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry, addGeneratedPage, refreshWorkspaceFiles, refreshOutputFiles]);
+  }, [currentDesign, settings.activeProvider, settings.providers, settings.agentDefaults, summarySystemPrompt, clearLogs, clearContext, clearGeneratedPages, clearSummaryText, clearFilesWrittenInRun, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry, addGeneratedPage, refreshWorkspaceFiles, refreshOutputFiles, appendSummaryChunk, addFileWrittenInRun]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'running' && engineRef.current) {

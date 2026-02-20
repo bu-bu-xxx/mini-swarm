@@ -104,6 +104,16 @@ interface AppState {
   setDesignSystemPrompt: (prompt: string) => void;
   refineSystemPrompt: string;
   setRefineSystemPrompt: (prompt: string) => void;
+
+  // Summary Agent
+  summaryText: string;
+  appendSummaryChunk: (chunk: string) => void;
+  clearSummaryText: () => void;
+  summarySystemPrompt: string;
+  setSummarySystemPrompt: (prompt: string) => void;
+  filesWrittenInRun: Array<{ path: string; agentName: string }>;
+  addFileWrittenInRun: (path: string, agentName: string) => void;
+  clearFilesWrittenInRun: () => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -477,5 +487,15 @@ export const useAppStore = create<AppState>()(
     setDesignSystemPrompt: (prompt) => set((s) => { s.designSystemPrompt = prompt; }),
     refineSystemPrompt: '',
     setRefineSystemPrompt: (prompt) => set((s) => { s.refineSystemPrompt = prompt; }),
+
+    // Summary Agent
+    summaryText: '',
+    appendSummaryChunk: (chunk) => set((s) => { s.summaryText += chunk; }),
+    clearSummaryText: () => set((s) => { s.summaryText = ''; }),
+    summarySystemPrompt: '',
+    setSummarySystemPrompt: (prompt) => set((s) => { s.summarySystemPrompt = prompt; }),
+    filesWrittenInRun: [],
+    addFileWrittenInRun: (path, agentName) => set((s) => { s.filesWrittenInRun.push({ path, agentName }); }),
+    clearFilesWrittenInRun: () => set((s) => { s.filesWrittenInRun = []; }),
   }))
 );
