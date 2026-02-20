@@ -18,6 +18,7 @@ import type {
   GeneratedPageLink,
   NodeStatus,
   MCPServerConfig,
+  SummaryEntry,
 } from '../types';
 import type { FileEntry } from '../core/storage/opfs';
 import { opfsService } from '../core/storage/opfs';
@@ -104,6 +105,13 @@ interface AppState {
   setDesignSystemPrompt: (prompt: string) => void;
   refineSystemPrompt: string;
   setRefineSystemPrompt: (prompt: string) => void;
+
+  // Summary Agent
+  summaryEntries: SummaryEntry[];
+  addSummaryEntry: (entry: SummaryEntry) => void;
+  clearSummaryEntries: () => void;
+  summarySystemPrompt: string;
+  setSummarySystemPrompt: (prompt: string) => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -477,5 +485,12 @@ export const useAppStore = create<AppState>()(
     setDesignSystemPrompt: (prompt) => set((s) => { s.designSystemPrompt = prompt; }),
     refineSystemPrompt: '',
     setRefineSystemPrompt: (prompt) => set((s) => { s.refineSystemPrompt = prompt; }),
+
+    // Summary Agent
+    summaryEntries: [],
+    addSummaryEntry: (entry) => set((s) => { s.summaryEntries.push(entry); }),
+    clearSummaryEntries: () => set((s) => { s.summaryEntries = []; }),
+    summarySystemPrompt: '',
+    setSummarySystemPrompt: (prompt) => set((s) => { s.summarySystemPrompt = prompt; }),
   }))
 );

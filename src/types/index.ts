@@ -150,3 +150,27 @@ export interface LLMResponse {
 export type AppView = 'setup' | 'workspace';
 
 export type ExecutionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'failed';
+
+// Summary Agent types
+
+export interface SummaryEntry {
+  id: string;
+  agentId: string;
+  agentName: string;
+  summary: string;
+  links: SummaryLink[];
+  timestamp: number;
+}
+
+export interface SummaryLink {
+  type: 'file' | 'page';
+  path: string;
+  url?: string;
+  label: string;
+}
+
+export interface ToolCallInfo {
+  name: string;
+  arguments: Record<string, unknown>;
+  result?: string;
+}
