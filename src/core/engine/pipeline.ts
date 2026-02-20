@@ -27,6 +27,9 @@ const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
   maxIterations: 10,
 };
 
+const SUMMARY_POLL_INTERVAL_MS = 100;
+const MAX_TOOL_RESULT_LENGTH = 200;
+
 export class PipelineEngine {
   context = new Map<string, ContextEntry>();
   aborted = false;
@@ -220,7 +223,7 @@ export class PipelineEngine {
           this.collectedToolCalls.get(node.id)?.push({
             name: tc.name,
             arguments: tc.arguments,
-            result: toolResult.slice(0, 200),
+            result: toolResult.slice(0, MAX_TOOL_RESULT_LENGTH),
           });
 
           this.log(node, 'info', `Tool ${tc.name} result: ${toolResult.slice(0, 200)}${toolResult.length > 200 ? '...' : ''}`);
@@ -301,7 +304,7 @@ export class PipelineEngine {
         if (!this.summaryAgent || this.summaryAgent.isIdle()) {
           resolve();
         } else {
-          setTimeout(check, 100);
+          setTimeout(check, SUMMARY_POLL_INTERVAL_MS);
         }
       };
       check();

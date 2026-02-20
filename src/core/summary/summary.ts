@@ -11,6 +11,9 @@ export const DEFAULT_SUMMARY_SYSTEM_PROMPT = `你是一个执行摘要助手。�
 4. 基于已有的总结历史保持连贯性，避免重复内容
 5. 用中文回答`;
 
+const MAX_AGENT_OUTPUT_LENGTH = 3000;
+const MAX_SUMMARY_TOKENS = 256;
+
 export interface SummaryTask {
   agentId: string;
   agentName: string;
@@ -106,7 +109,7 @@ export class SummaryAgent {
         ).join('\n')
       : '(无工具调用)';
 
-    const userPrompt = `## 已有总结:\n${previousSummaries}\n\n## 当前 Agent 信息:\n- 名称: ${task.agentName}\n- 角色: ${task.agentRole}\n- 使用的工具调用:\n${toolCallsText}\n\n## Agent 输出内容:\n${task.agentOutput.slice(0, 3000)}\n\n请概括该 agent 的工作内容。`;
+    const userPrompt = `## 已有总结:\n${previousSummaries}\n\n## 当前 Agent 信息:\n- 名称: ${task.agentName}\n- 角色: ${task.agentRole}\n- 使用的工具调用:\n${toolCallsText}\n\n## Agent 输出内容:\n${task.agentOutput.slice(0, MAX_AGENT_OUTPUT_LENGTH)}\n\n请概括该 agent 的工作内容。`;
 
     const response = await callLLM({
       messages: [
@@ -116,7 +119,7 @@ export class SummaryAgent {
       model: this.model,
       apiKey: this.apiKey,
       temperature: 0.3,
-      maxTokens: 256,
+      maxTokens: MAX_SUMMARY_TOKENS,
     });
 
     const summary = response.content;
