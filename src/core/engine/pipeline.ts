@@ -2,7 +2,8 @@ import { callLLM } from '../llm/openrouter';
 import { executeBuiltinTool, getToolSchemasForAgent, isBuiltinTool } from '../tools/builtin';
 import { opfsService } from '../storage/opfs';
 import { identifyParallelGroups } from '../../utils/topology';
-import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage } from '../../types';
+import { generateAgentSummary } from '../summary/summarizer';
+import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage, SummaryEntry, SummaryLink } from '../../types';
 
 export interface EngineCallbacks {
   onNodeStatusChange: (nodeId: string, status: NodeStatus, error?: string) => void;
@@ -17,6 +18,9 @@ export interface EngineCallbacks {
     timestamp: number;
     generatedBy: string;
   }) => void;
+  onSummaryEntry?: (entry: SummaryEntry) => void;
+  onSummaryTextChunk?: (id: string, chunk: string) => void;
+  onSummaryComplete?: (id: string) => void;
 }
 
 const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
@@ -34,13 +38,15 @@ export class PipelineEngine {
   model: string;
   callbacks: EngineCallbacks;
   agentDefaults: AgentDefaults;
+  summarySystemPrompt: string;
   startedAt: number = 0;
 
-  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults) {
+  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults, summarySystemPrompt?: string) {
     this.apiKey = apiKey;
     this.model = model;
     this.callbacks = callbacks;
     this.agentDefaults = agentDefaults || DEFAULT_AGENT_DEFAULTS;
+    this.summarySystemPrompt = summarySystemPrompt || '';
   }
 
   async execute(design: SwarmDesign): Promise<void> {
@@ -130,6 +136,10 @@ export class PipelineEngine {
 
       let result = '';
 
+      // Track tool artifacts for summary
+      const fileWrites: string[] = [];
+      const localPageLinks: { title: string; url: string }[] = [];
+
       // ReAct loop
       for (let iteration = 0; iteration < maxIterations; iteration++) {
         if (this.aborted) return;
@@ -173,8 +183,21 @@ export class PipelineEngine {
             if (['file_write', 'file_delete', 'python_workspace_tool'].includes(tc.name)) {
               this.callbacks.onWorkspaceChanged?.();
             }
+            // Track file writes for summary
+            if (tc.name === 'file_write' && typeof tc.arguments.path === 'string') {
+              fileWrites.push(tc.arguments.path);
+            }
             if (tc.name === 'webpage_build_preview_tool') {
               this.handlePreviewToolResult(toolResult, node.name);
+              // Also capture page link for summary
+              try {
+                const parsed = JSON.parse(toolResult) as { success?: boolean; previewUrl?: string; title?: string; entryPath?: string };
+                if (parsed.success && parsed.previewUrl) {
+                  localPageLinks.push({ title: parsed.title || parsed.entryPath || parsed.previewUrl, url: parsed.previewUrl });
+                }
+              } catch {
+                console.debug('webpage_build_preview_tool returned non-JSON output for summary tracking');
+              }
             }
           } catch (err) {
             toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
@@ -222,6 +245,38 @@ export class PipelineEngine {
         timestamp: Date.now(),
         type: 'intermediate',
       });
+
+      // Fire async summary generation (non-blocking, does not affect pipeline)
+      if (this.callbacks.onSummaryEntry) {
+        const entryId = `summary-${node.id}-${Date.now()}`;
+        const links: SummaryLink[] = [
+          ...fileWrites.map((fp) => ({ type: 'file' as const, label: fp, filePath: fp })),
+          ...localPageLinks.map((p) => ({ type: 'page' as const, label: p.title, url: p.url })),
+        ];
+        const summaryEntry: SummaryEntry = {
+          id: entryId,
+          agentName: node.name,
+          agentRole: node.role,
+          text: '',
+          timestamp: Date.now(),
+          links,
+          streaming: true,
+        };
+        this.callbacks.onSummaryEntry(summaryEntry);
+        generateAgentSummary({
+          agentName: node.name,
+          agentRole: node.role,
+          output: result,
+          fileWrites,
+          generatedPageTitles: localPageLinks.map((p) => p.title),
+          apiKey: this.apiKey,
+          model: this.model,
+          systemPrompt: this.summarySystemPrompt || undefined,
+          onChunk: (chunk) => this.callbacks.onSummaryTextChunk?.(entryId, chunk),
+        }).finally(() => {
+          this.callbacks.onSummaryComplete?.(entryId);
+        });
+      }
 
       this.log(node, 'info', `Agent ${node.name} completed successfully`);
       this.callbacks.onNodeStatusChange(node.id, 'completed');

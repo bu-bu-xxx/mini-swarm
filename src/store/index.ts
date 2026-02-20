@@ -18,6 +18,7 @@ import type {
   GeneratedPageLink,
   NodeStatus,
   MCPServerConfig,
+  SummaryEntry,
 } from '../types';
 import type { FileEntry } from '../core/storage/opfs';
 import { opfsService } from '../core/storage/opfs';
@@ -104,6 +105,15 @@ interface AppState {
   setDesignSystemPrompt: (prompt: string) => void;
   refineSystemPrompt: string;
   setRefineSystemPrompt: (prompt: string) => void;
+
+  // Summary
+  summaryEntries: SummaryEntry[];
+  addSummaryEntry: (entry: SummaryEntry) => void;
+  appendSummaryText: (id: string, chunk: string) => void;
+  finalizeSummaryEntry: (id: string) => void;
+  clearSummaryEntries: () => void;
+  summarySystemPrompt: string;
+  setSummarySystemPrompt: (prompt: string) => void;
 }
 
 const DEFAULT_PROVIDER: ModelProvider = 'openrouter';
@@ -477,5 +487,20 @@ export const useAppStore = create<AppState>()(
     setDesignSystemPrompt: (prompt) => set((s) => { s.designSystemPrompt = prompt; }),
     refineSystemPrompt: '',
     setRefineSystemPrompt: (prompt) => set((s) => { s.refineSystemPrompt = prompt; }),
+
+    // Summary
+    summaryEntries: [],
+    addSummaryEntry: (entry) => set((s) => { s.summaryEntries.push(entry); }),
+    appendSummaryText: (id, chunk) => set((s) => {
+      const entry = s.summaryEntries.find((e) => e.id === id);
+      if (entry) entry.text += chunk;
+    }),
+    finalizeSummaryEntry: (id) => set((s) => {
+      const entry = s.summaryEntries.find((e) => e.id === id);
+      if (entry) entry.streaming = false;
+    }),
+    clearSummaryEntries: () => set((s) => { s.summaryEntries = []; }),
+    summarySystemPrompt: '',
+    setSummarySystemPrompt: (prompt) => set((s) => { s.summarySystemPrompt = prompt; }),
   }))
 );

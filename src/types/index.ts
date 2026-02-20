@@ -147,6 +147,23 @@ export interface LLMResponse {
   };
 }
 
+export interface SummaryLink {
+  type: 'file' | 'page';
+  label: string;
+  filePath?: string;
+  url?: string;
+}
+
+export interface SummaryEntry {
+  id: string;
+  agentName: string;
+  agentRole: string;
+  text: string;
+  timestamp: number;
+  links: SummaryLink[];
+  streaming: boolean;
+}
+
 export type AppView = 'setup' | 'workspace';
 
 export type ExecutionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'failed';
