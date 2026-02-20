@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store';
 import { cn } from '../../utils';
 
-const BUILT_IN_TOOLS = ['file_read', 'file_write', 'file_list', 'file_delete'];
+const BUILT_IN_TOOLS = [
+  'file_read',
+  'file_write',
+  'file_list',
+  'file_delete',
+  'python_workspace_tool',
+  'webpage_build_preview_tool',
+];
 
 export default function AgentDrawer() {
   const selectedNodeId = useAppStore((s) => s.selectedNodeId);

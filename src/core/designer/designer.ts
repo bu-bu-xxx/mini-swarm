@@ -11,7 +11,7 @@ export const DEFAULT_DESIGN_SYSTEM_PROMPT = `You are an expert multi-agent syste
 Available external tools:
 {{toolDescriptions}}
 
-Built-in tools always available: file_read, file_write, file_list, file_delete
+Built-in tools always available: file_read, file_write, file_list, file_delete, python_workspace_tool, webpage_build_preview_tool
 
 Respond with a JSON object with this exact structure:
 {
@@ -48,7 +48,7 @@ Current design:
 Available external tools:
 {{toolDescriptions}}
 
-Built-in tools always available: file_read, file_write, file_list, file_delete
+Built-in tools always available: file_read, file_write, file_list, file_delete, python_workspace_tool, webpage_build_preview_tool
 
 Based on the user's modification request, output the COMPLETE updated design as JSON with this exact structure:
 {
@@ -108,7 +108,7 @@ export async function designSwarm(options: DesignOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete, python_workspace_tool, webpage_build_preview_tool tools.';
 
   const resolvedSystemPrompt = (systemPrompt || DEFAULT_DESIGN_SYSTEM_PROMPT)
     .replace('{{toolDescriptions}}', toolDescriptions);
@@ -222,7 +222,7 @@ export async function refineSwarm(options: RefineOptions): Promise<SwarmDesign> 
 
   const toolDescriptions = availableTools.length > 0
     ? availableTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')
-    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete tools.';
+    : 'No external tools available. Agents will use built-in file_read, file_write, file_list, file_delete, python_workspace_tool, webpage_build_preview_tool tools.';
 
   const currentDesignJSON = JSON.stringify({
     taskDescription: currentDesign.taskDescription,

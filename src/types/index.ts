@@ -56,6 +56,15 @@ export interface ContextEntry {
   type: 'intermediate' | 'final' | 'file_reference';
 }
 
+export interface GeneratedPageLink {
+  id: string;
+  entryPath: string;
+  title: string;
+  url: string;
+  timestamp: number;
+  generatedBy: string;
+}
+
 export type NodeStatus = 'idle' | 'running' | 'completed' | 'failed';
 
 export interface NodeExecutionState {

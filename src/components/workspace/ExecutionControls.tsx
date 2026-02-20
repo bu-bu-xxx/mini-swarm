@@ -1,6 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { useAppStore } from '../../store';
 import { PipelineEngine } from '../../core/engine/pipeline';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function ExecutionControls() {
   const {
@@ -14,6 +15,8 @@ export default function ExecutionControls() {
     clearContext,
     initNodeStates,
     clearLogs,
+    addGeneratedPage,
+    clearGeneratedPages,
     refreshWorkspaceFiles,
     refreshOutputFiles,
   } = useAppStore();
@@ -31,6 +34,7 @@ export default function ExecutionControls() {
 
     clearLogs();
     clearContext();
+    clearGeneratedPages();
     initNodeStates(currentDesign.topology.nodes.map((n) => n.id));
     setExecutionStatus('running');
 
@@ -51,6 +55,16 @@ export default function ExecutionControls() {
       onWorkspaceChanged: () => {
         refreshWorkspaceFiles();
       },
+      onPagePreviewGenerated: (preview) => {
+        addGeneratedPage({
+          id: uuidv4(),
+          entryPath: preview.entryPath,
+          title: preview.title,
+          url: preview.url,
+          timestamp: preview.timestamp,
+          generatedBy: preview.generatedBy,
+        });
+      },
     }, settings.agentDefaults);
 
     engineRef.current = engine;
@@ -68,7 +82,7 @@ export default function ExecutionControls() {
         level: 'error',
       });
     }
-  }, [currentDesign, settings.activeProvider, settings.providers, settings.agentDefaults, clearLogs, clearContext, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry, refreshWorkspaceFiles, refreshOutputFiles]);
+  }, [currentDesign, settings.activeProvider, settings.providers, settings.agentDefaults, clearLogs, clearContext, clearGeneratedPages, initNodeStates, setExecutionStatus, setNodeStatus, addLog, setContextEntry, addGeneratedPage, refreshWorkspaceFiles, refreshOutputFiles]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'running' && engineRef.current) {

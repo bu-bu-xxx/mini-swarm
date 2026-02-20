@@ -15,6 +15,7 @@ import type {
   LogEntry,
   ExecutionStatus,
   ContextEntry,
+  GeneratedPageLink,
   NodeStatus,
   MCPServerConfig,
 } from '../types';
@@ -72,6 +73,11 @@ interface AppState {
   context: Record<string, ContextEntry>;
   setContextEntry: (key: string, entry: ContextEntry) => void;
   clearContext: () => void;
+
+  // Generated Web Pages
+  generatedPages: GeneratedPageLink[];
+  addGeneratedPage: (page: GeneratedPageLink) => void;
+  clearGeneratedPages: () => void;
 
   // UI State
   settingsOpen: boolean;
@@ -426,6 +432,11 @@ export const useAppStore = create<AppState>()(
     context: {},
     setContextEntry: (key, entry) => set((s) => { s.context[key] = entry; }),
     clearContext: () => set((s) => { s.context = {}; }),
+
+    // Generated Web Pages
+    generatedPages: [],
+    addGeneratedPage: (page) => set((s) => { s.generatedPages.unshift(page); }),
+    clearGeneratedPages: () => set((s) => { s.generatedPages = []; }),
 
     // UI State
     settingsOpen: false,
