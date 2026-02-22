@@ -2,9 +2,7 @@ import { useAppStore } from '../../store';
 import { exportDesignAsJSON, importDesignFromJSON, isValidSwarmDesign } from '../../utils';
 import TaskInput from './TaskInput';
 import ExecutionControls from './ExecutionControls';
-import ContextViewer from './ContextViewer';
 import FileManager from './FileManager';
-import GeneratedPagesSidebar from './GeneratedPagesSidebar';
 import SummarySidebar from './SummarySidebar';
 import PipelineGraph from '../pipeline/PipelineGraph';
 import AgentDrawer from '../pipeline/AgentDrawer';
@@ -127,14 +125,10 @@ export default function Workspace() {
           {!rightPanelCollapsed && (
             <div className="flex-1 flex flex-col overflow-hidden">
               <ExecutionControls />
-              <div className="max-h-32 overflow-hidden border-t border-slate-700">
+              <div className="flex-1 overflow-hidden border-t border-slate-700">
                 <LogViewer />
               </div>
-              <div className="border-t border-slate-700 max-h-48 overflow-y-auto">
-                <ContextViewer />
-              </div>
               <SummarySidebar />
-              <GeneratedPagesSidebar />
             </div>
           )}
         </div>

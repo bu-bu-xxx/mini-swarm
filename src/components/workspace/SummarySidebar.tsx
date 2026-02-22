@@ -100,7 +100,7 @@ export default function SummarySidebar() {
       {/* Summary entries */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 pb-2">
         {summaryEntries.length === 0 ? (
-          <p className="text-xs text-slate-600">Pipeline 运行后将显示实时摘要</p>
+          <p className="text-xs text-slate-600">Real-time summaries will appear here once the pipeline runs</p>
         ) : (
           <div className="space-y-2">
             {summaryEntries.map((entry) => (

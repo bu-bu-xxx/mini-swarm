@@ -2,14 +2,14 @@ import { callLLM } from '../llm/openrouter';
 import { v4 as uuidv4 } from 'uuid';
 import type { SummaryEntry, SummaryLink, ToolCallInfo } from '../../types';
 
-export const DEFAULT_SUMMARY_SYSTEM_PROMPT = `你是一个执行摘要助手。你的任务是用简洁的文字概括 AI Agent 的工作内容和产出。
+export const DEFAULT_SUMMARY_SYSTEM_PROMPT = `You are an execution summary assistant. Your task is to concisely summarize the work and output of each AI Agent.
 
-规则：
-1. 每个摘要限制在 1-3 句话以内，保持极度简洁
-2. 如果 agent 使用了 file_write 工具创建了文件，用 [FILE:文件路径] 标记
-3. 如果 agent 使用了 webpage_build_preview_tool 生成了网页，用 [PAGE:页面标题] 标记
-4. 基于已有的总结历史保持连贯性，避免重复内容
-5. 用中文回答`;
+Rules:
+1. Keep each summary to 1-3 sentences, extremely concise
+2. If the agent used the file_write tool to create a file, mark it with [FILE:file_path]
+3. If the agent used webpage_build_preview_tool to generate a web page, mark it with [PAGE:page_title]
+4. Maintain coherence with previous summaries, avoid repeating content
+5. Respond in the same language as the user's task description`;
 
 const MAX_AGENT_OUTPUT_LENGTH = 3000;
 const MAX_SUMMARY_TOKENS = 256;
@@ -24,6 +24,8 @@ export interface SummaryTask {
   onError?: (error: Error) => void;
 }
 
+export type SummaryLogFn = (agentName: string, level: 'info' | 'warn' | 'error', message: string) => void;
+
 export class SummaryAgent {
   private queue: SummaryTask[] = [];
   private processing = false;
@@ -33,10 +35,13 @@ export class SummaryAgent {
   private systemPrompt: string;
   private aborted = false;
 
-  constructor(apiKey: string, model: string, systemPrompt?: string) {
+  private logFn?: SummaryLogFn;
+
+  constructor(apiKey: string, model: string, systemPrompt?: string, logFn?: SummaryLogFn) {
     this.apiKey = apiKey;
     this.model = model;
     this.systemPrompt = systemPrompt || DEFAULT_SUMMARY_SYSTEM_PROMPT;
+    this.logFn = logFn;
   }
 
   /** Enqueue a summary task */
@@ -99,17 +104,19 @@ export class SummaryAgent {
 
   /** Call LLM to generate summary */
   private async generateSummary(task: SummaryTask): Promise<SummaryEntry> {
+    this.logFn?.(task.agentName, 'info', `Summary: Generating summary for agent ${task.agentName}...`);
+
     const previousSummaries = this.entries.length > 0
       ? this.entries.map((e) => `- **${e.agentName}**: ${e.summary}`).join('\n')
-      : '(暂无)';
+      : '(None yet)';
 
     const toolCallsText = task.toolCalls.length > 0
       ? task.toolCalls.map((tc) =>
           `- ${tc.name}(${JSON.stringify(tc.arguments)})`
         ).join('\n')
-      : '(无工具调用)';
+      : '(No tool calls)';
 
-    const userPrompt = `## 已有总结:\n${previousSummaries}\n\n## 当前 Agent 信息:\n- 名称: ${task.agentName}\n- 角色: ${task.agentRole}\n- 使用的工具调用:\n${toolCallsText}\n\n## Agent 输出内容:\n${task.agentOutput.slice(0, MAX_AGENT_OUTPUT_LENGTH)}\n\n请概括该 agent 的工作内容。`;
+    const userPrompt = `## Previous summaries:\n${previousSummaries}\n\n## Current Agent info:\n- Name: ${task.agentName}\n- Role: ${task.agentRole}\n- Tool calls used:\n${toolCallsText}\n\n## Agent output:\n${task.agentOutput.slice(0, MAX_AGENT_OUTPUT_LENGTH)}\n\nPlease summarize this agent's work.`;
 
     const response = await callLLM({
       messages: [
@@ -124,6 +131,8 @@ export class SummaryAgent {
 
     const summary = response.content;
     const links = this.parseLinks(summary, task.toolCalls);
+
+    this.logFn?.(task.agentName, 'info', `Summary: Completed summary for agent ${task.agentName}`);
 
     return {
       id: uuidv4(),

@@ -66,6 +66,15 @@ export class PipelineEngine {
       this.apiKey,
       this.model,
       this.summarySystemPrompt || undefined,
+      (agentName, level, message) => {
+        this.callbacks.onLog({
+          timestamp: Date.now(),
+          nodeId: 'summary',
+          nodeName: `Summary(${agentName})`,
+          message,
+          level,
+        });
+      },
     );
     this.collectedToolCalls.clear();
 
