@@ -38,7 +38,8 @@ Design tips:
 - Identify tasks that can run in parallel
 - Each agent should have a clear, focused responsibility
 - Create 2-6 agents depending on task complexity
-- Simple tasks may only need 2 agents, complex ones need more`;
+- Simple tasks may only need 2 agents, complex ones need more
+- All text content (todo descriptions, agent names, roles, skills) must be in the same language as the user's input`;
 
 export const DEFAULT_REFINE_SYSTEM_PROMPT = `You are an expert multi-agent system designer. You are given an existing multi-agent swarm design and a user request to modify it.
 
@@ -74,7 +75,8 @@ Based on the user's modification request, output the COMPLETE updated design as 
 Important:
 - Incorporate the user's requested changes
 - Keep unchanged parts as they are
-- Output the COMPLETE design, not just the changes`;
+- Output the COMPLETE design, not just the changes
+- All text content (todo descriptions, agent names, roles, skills) must be in the same language as the user's input`;
 
 interface DesignOptions {
   task: string;
