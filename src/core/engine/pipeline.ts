@@ -2,7 +2,8 @@ import { callLLM } from '../llm/openrouter';
 import { executeBuiltinTool, getToolSchemasForAgent, isBuiltinTool } from '../tools/builtin';
 import { opfsService } from '../storage/opfs';
 import { identifyParallelGroups } from '../../utils/topology';
-import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage } from '../../types';
+import { SummaryAgent } from '../summary/summary';
+import type { SwarmDesign, AgentNode, AgentDefaults, ContextEntry, LogEntry, NodeStatus, LLMMessage, SummaryEntry, ToolCallInfo } from '../../types';
 
 export interface EngineCallbacks {
   onNodeStatusChange: (nodeId: string, status: NodeStatus, error?: string) => void;
@@ -17,6 +18,7 @@ export interface EngineCallbacks {
     timestamp: number;
     generatedBy: string;
   }) => void;
+  onSummaryGenerated?: (entry: SummaryEntry) => void;
 }
 
 const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
@@ -24,6 +26,9 @@ const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
   maxTokens: 4096,
   maxIterations: 10,
 };
+
+const SUMMARY_POLL_INTERVAL_MS = 100;
+const MAX_TOOL_RESULT_LENGTH = 200;
 
 export class PipelineEngine {
   context = new Map<string, ContextEntry>();
@@ -35,12 +40,16 @@ export class PipelineEngine {
   callbacks: EngineCallbacks;
   agentDefaults: AgentDefaults;
   startedAt: number = 0;
+  private summaryAgent: SummaryAgent | null = null;
+  private collectedToolCalls = new Map<string, ToolCallInfo[]>();
+  private summarySystemPrompt?: string;
 
-  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults) {
+  constructor(apiKey: string, model: string, callbacks: EngineCallbacks, agentDefaults?: AgentDefaults, summarySystemPrompt?: string) {
     this.apiKey = apiKey;
     this.model = model;
     this.callbacks = callbacks;
     this.agentDefaults = agentDefaults || DEFAULT_AGENT_DEFAULTS;
+    this.summarySystemPrompt = summarySystemPrompt;
   }
 
   async execute(design: SwarmDesign): Promise<void> {
@@ -51,6 +60,23 @@ export class PipelineEngine {
 
     // Initialize OPFS
     await opfsService.init();
+
+    // Initialize Summary Agent
+    this.summaryAgent = new SummaryAgent(
+      this.apiKey,
+      this.model,
+      this.summarySystemPrompt || undefined,
+      (agentName, level, message) => {
+        this.callbacks.onLog({
+          timestamp: Date.now(),
+          nodeId: 'summary',
+          nodeName: `Summary(${agentName})`,
+          message,
+          level,
+        });
+      },
+    );
+    this.collectedToolCalls.clear();
 
     // Set initial task context
     this.setContext('__task__', {
@@ -72,6 +98,19 @@ export class PipelineEngine {
       );
 
       if (this.context.has('__TERMINATE__')) break;
+    }
+
+    // Wait for Summary Agent to finish all pending tasks
+    await this.waitForSummaryComplete();
+
+    // Store summary in context for persistence
+    if (this.summaryAgent && this.summaryAgent.getEntries().length > 0) {
+      this.setContext('SummaryAgent(__summary__)', {
+        value: this.summaryAgent.getFullSummaryText(),
+        producedBy: '__summary__',
+        timestamp: Date.now(),
+        type: 'final',
+      });
     }
 
     // Auto-persist outputs to /outputs
@@ -97,6 +136,9 @@ export class PipelineEngine {
 
     this.callbacks.onNodeStatusChange(node.id, 'running');
     this.log(node, 'info', `Starting agent: ${node.name} (${node.role})`);
+
+    // Initialize tool call collector for this node
+    this.collectedToolCalls.set(node.id, []);
 
     try {
       // Gather input from context based on mappings
@@ -186,6 +228,13 @@ export class PipelineEngine {
             tool_call_id: tc.id,
           });
 
+          // Collect tool call info for summary
+          this.collectedToolCalls.get(node.id)?.push({
+            name: tc.name,
+            arguments: tc.arguments,
+            result: toolResult.slice(0, MAX_TOOL_RESULT_LENGTH),
+          });
+
           this.log(node, 'info', `Tool ${tc.name} result: ${toolResult.slice(0, 200)}${toolResult.length > 200 ? '...' : ''}`);
         }
 
@@ -225,6 +274,9 @@ export class PipelineEngine {
 
       this.log(node, 'info', `Agent ${node.name} completed successfully`);
       this.callbacks.onNodeStatusChange(node.id, 'completed');
+
+      // Enqueue summary task
+      this.enqueueSummary(node, result);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.log(node, 'error', `Agent ${node.name} failed: ${errMsg}`);
@@ -238,6 +290,34 @@ export class PipelineEngine {
     }
     // MCP tools would go here in future
     return `Unknown tool: ${name}`;
+  }
+
+  private enqueueSummary(node: AgentNode, agentOutput: string): void {
+    if (!this.summaryAgent) return;
+
+    this.summaryAgent.enqueue({
+      agentId: node.id,
+      agentName: node.name,
+      agentRole: node.role,
+      agentOutput,
+      toolCalls: this.collectedToolCalls.get(node.id) || [],
+      onComplete: (entry) => {
+        this.callbacks.onSummaryGenerated?.(entry);
+      },
+    });
+  }
+
+  private waitForSummaryComplete(): Promise<void> {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (!this.summaryAgent || this.summaryAgent.isIdle()) {
+          resolve();
+        } else {
+          setTimeout(check, SUMMARY_POLL_INTERVAL_MS);
+        }
+      };
+      check();
+    });
   }
 
   buildAgentPrompt(node: AgentNode, design: SwarmDesign): string {
@@ -364,6 +444,9 @@ ${Array.from(this.context.keys()).filter(k => !k.startsWith('__')).join(', ') ||
 
   abort(): void {
     this.aborted = true;
+    if (this.summaryAgent) {
+      this.summaryAgent.abort();
+    }
     if (this.pauseResolve) {
       this.pauseResolve();
       this.pauseResolve = null;
