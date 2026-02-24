@@ -130,7 +130,13 @@ export default function ExecutionControls() {
     failed: 'text-red-400',
   };
 
-  const statusKey = `status.${executionStatus}` as const;
+  const statusTranslationKeys: Record<string, 'status.idle' | 'status.running' | 'status.paused' | 'status.completed' | 'status.failed'> = {
+    idle: 'status.idle',
+    running: 'status.running',
+    paused: 'status.paused',
+    completed: 'status.completed',
+    failed: 'status.failed',
+  };
 
   const hasDesign = !!currentDesign;
   const hasKey = !!(settings.providers[settings.activeProvider]?.apiKey);
@@ -144,7 +150,7 @@ export default function ExecutionControls() {
       <div className="flex items-center gap-1.5 mb-2">
         <span className={`inline-block w-2 h-2 rounded-full ${statusColorsDot[executionStatus]}`} />
         <span className={`text-xs ${statusColorsText[executionStatus]}`}>
-          {t(statusKey)}
+          {t(statusTranslationKeys[executionStatus] || 'status.idle')}
         </span>
       </div>
 

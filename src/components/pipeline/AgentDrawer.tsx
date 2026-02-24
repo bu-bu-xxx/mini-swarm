@@ -90,9 +90,16 @@ export default function AgentDrawer() {
   };
 
   // Collect all available MCP tools from connected servers
-  const mcpToolNames = mcpServers.flatMap((s) => s.tools.map((t) => t.name));
+  const mcpToolNames = mcpServers.flatMap((srv) => srv.tools.map((tool) => tool.name));
   const allKnownTools = [...new Set([...BUILT_IN_TOOLS, ...mcpToolNames])];
-  const addableTools = allKnownTools.filter((t) => !node.tools.includes(t));
+  const addableTools = allKnownTools.filter((name) => !node.tools.includes(name));
+
+  const statusTranslationKeys: Record<string, 'status.idle' | 'status.running' | 'status.completed' | 'status.failed'> = {
+    idle: 'status.idle',
+    running: 'status.running',
+    completed: 'status.completed',
+    failed: 'status.failed',
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -161,7 +168,7 @@ export default function AgentDrawer() {
                 state.status === 'completed' && 'bg-green-600 text-green-100',
                 state.status === 'failed' && 'bg-red-600 text-red-100',
               )}>
-                {t(`status.${state.status}` as const)}
+                {t(statusTranslationKeys[state.status] || 'status.idle')}
               </span>
               {state.error && (
                 <div className="mt-2 p-2 bg-red-900/30 border border-red-800 rounded text-xs text-red-300">
