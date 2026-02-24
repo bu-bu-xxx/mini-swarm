@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../../i18n';
 
 export default function PromptEditorModal({
   title,
@@ -14,6 +15,7 @@ export default function PromptEditorModal({
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(value || defaultValue);
+  const t = useT();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -23,19 +25,19 @@ export default function PromptEditorModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDraft(defaultValue)}
-              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
             >
-              Reset
+              {t('prompt.reset')}
             </button>
             <button
               onClick={() => { onSave(draft); onClose(); }}
-              className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded transition"
+              className="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition"
             >
-              Save
+              {t('prompt.save')}
             </button>
             <button
               onClick={onClose}
-              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+              className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
             >
               ✕
             </button>

@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import AgentNodeComponent from './AgentNode';
 
 const nodeTypes: NodeTypes = {
@@ -32,6 +33,7 @@ export default function PipelineGraph() {
   const addAgentToStore = useAppStore((s) => s.addAgent);
   const removeAgentFromStore = useAppStore((s) => s.removeAgent);
   const newAgentId = useAppStore((s) => s.newAgentId);
+  const t = useT();
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentRole, setNewAgentRole] = useState('researcher');
@@ -169,8 +171,8 @@ export default function PipelineGraph() {
       <div className="w-full h-full flex items-center justify-center text-slate-500">
         <div className="text-center">
           <div className="text-6xl mb-4">🐝</div>
-          <p className="text-lg">Describe a task to generate your Agent Swarm</p>
-          <p className="text-sm mt-2 text-slate-600">The pipeline will appear here</p>
+          <p className="text-lg">{t('graph.empty.line1')}</p>
+          <p className="text-sm mt-2 text-slate-600">{t('graph.empty.line2')}</p>
         </div>
       </div>
     );
@@ -214,19 +216,19 @@ export default function PipelineGraph() {
           onClick={() => setShowAddAgent(!showAddAgent)}
           className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-medium shadow-lg transition"
         >
-          ➕ Add Agent
+          {t('graph.addAgent')}
         </button>
       </div>
 
       {/* Add Agent Dialog */}
       {showAddAgent && (
         <div className="absolute top-12 right-3 z-20 bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl w-64 space-y-2">
-          <h4 className="text-xs font-semibold text-slate-400 uppercase">New Agent</h4>
+          <h4 className="text-xs font-semibold text-slate-400 uppercase">{t('graph.newAgent')}</h4>
           <input
             type="text"
             value={newAgentName}
             onChange={(e) => setNewAgentName(e.target.value)}
-            placeholder="Agent name..."
+            placeholder={t('graph.agentName')}
             className="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
           <select
@@ -247,16 +249,16 @@ export default function PipelineGraph() {
               disabled={!newAgentName.trim()}
               className="flex-1 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition"
             >
-              Add
+              {t('graph.add')}
             </button>
             <button
               onClick={() => { setShowAddAgent(false); setNewAgentName(''); }}
-              className="flex-1 py-1.5 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs font-medium transition"
+              className="flex-1 py-1.5 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-xs font-medium transition"
             >
-              Cancel
+              {t('graph.cancel')}
             </button>
           </div>
-          <p className="text-xs text-slate-500">Tip: Select a node and press Delete to remove it</p>
+          <p className="text-xs text-slate-500">{t('graph.deleteTip')}</p>
         </div>
       )}
     </div>

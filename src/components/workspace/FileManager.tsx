@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { opfsService } from '../../core/storage/opfs';
 import type { FileEntry } from '../../core/storage/opfs';
 import JSZip from 'jszip';
@@ -143,6 +144,7 @@ export default function FileManager() {
     previewFile,
     setPreviewFile,
   } = useAppStore();
+  const t = useT();
 
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -231,6 +233,7 @@ export default function FileManager() {
   }, [refreshWorkspaceFiles]);
 
   const handleClearWorkspace = useCallback(async () => {
+    if (!window.confirm(t('files.confirmClearWorkspace'))) return;
     try {
       await opfsService.clearWorkspace();
       await refreshWorkspaceFiles();
@@ -238,9 +241,10 @@ export default function FileManager() {
     } catch {
       // clear failed
     }
-  }, [refreshWorkspaceFiles, setPreviewFile]);
+  }, [refreshWorkspaceFiles, setPreviewFile, t]);
 
   const handleClearOutputs = useCallback(async () => {
+    if (!window.confirm(t('files.confirmClearOutputs'))) return;
     try {
       await opfsService.clearOutputs();
       await refreshOutputFiles();
@@ -250,7 +254,7 @@ export default function FileManager() {
     } catch {
       // clear failed
     }
-  }, [refreshOutputFiles, previewFile, setPreviewFile]);
+  }, [refreshOutputFiles, previewFile, setPreviewFile, t]);
 
   const handleDownloadZip = useCallback(async (source: 'workspace' | 'outputs') => {
     try {
@@ -284,8 +288,8 @@ export default function FileManager() {
   return (
     <div className="p-3">
       {opfsWarning && (
-        <div className="mb-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-xs text-yellow-300">
-          ⚠ OPFS not supported. Files stored in memory only — lost on refresh.
+        <div className="mb-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded-lg text-xs text-yellow-300">
+          ⚠ {t('files.opfsWarning')}
         </div>
       )}
 
@@ -293,14 +297,14 @@ export default function FileManager() {
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-slate-400 uppercase">
-            📁 Workspace ({workspaceFiles.filter(f => f.kind === 'file').length})
+            📁 {t('files.workspace')} ({workspaceFiles.filter(f => f.kind === 'file').length})
           </h3>
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleDownloadZip('workspace')}
               disabled={workspaceFiles.length === 0}
               className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
-              title="Download as ZIP"
+              title={t('files.downloadZip')}
             >
               📦
             </button>
@@ -308,16 +312,16 @@ export default function FileManager() {
               onClick={handleClearWorkspace}
               disabled={workspaceFiles.length === 0}
               className="text-xs text-red-400 hover:text-red-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
-              title="Clear all files"
+              title={t('files.clearAll')}
             >
-              🗑
+              🗑️
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="text-xs text-purple-400 hover:text-purple-300 transition"
             >
-              📤 Upload
+              📤 {t('files.upload')}
             </button>
           </div>
         </div>
@@ -330,13 +334,13 @@ export default function FileManager() {
         />
 
         <div
-          className="min-h-[40px] border border-dashed border-slate-700 rounded p-1"
+          className="min-h-[40px] border border-dashed border-slate-700 rounded-lg p-1"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
         >
           {workspaceFiles.length === 0 ? (
             <p className="text-xs text-slate-600 text-center py-2">
-              Drop files here or click Upload
+              {t('files.dropHint')}
             </p>
           ) : (
             <div className="space-y-0.5">
@@ -364,15 +368,15 @@ export default function FileManager() {
           onClick={() => setOutputsCollapsed(!outputsCollapsed)}
         >
           <h3 className="text-xs font-semibold text-slate-400 uppercase">
-            <span className={`inline-block transition-transform ${outputsCollapsed ? '' : 'rotate-90'}`}>▶</span>
-            {' '}Saved Outputs ({outputFiles.length})
+            <span className={`inline-block transition-transform text-[10px] ${outputsCollapsed ? '' : 'rotate-90'}`}>▶</span>
+            {' '}{t('files.savedOutputs')} ({outputFiles.length})
           </h3>
           <div className="flex items-center gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); handleDownloadZip('outputs'); }}
               disabled={outputFiles.length === 0}
               className="text-xs text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
-              title="Download as ZIP"
+              title={t('files.downloadZip')}
             >
               📦
             </button>
@@ -380,17 +384,17 @@ export default function FileManager() {
               onClick={(e) => { e.stopPropagation(); handleClearOutputs(); }}
               disabled={outputFiles.length === 0}
               className="text-xs text-red-400 hover:text-red-300 disabled:text-slate-600 disabled:cursor-not-allowed transition"
-              title="Clear all outputs"
+              title={t('files.clearOutputs')}
             >
-              🗑
+              🗑️
             </button>
           </div>
         </div>
         {!outputsCollapsed && (
-          <div className="border border-slate-700 rounded p-1">
+          <div className="border border-slate-700 rounded-lg p-1">
             {outputFiles.length === 0 ? (
               <p className="text-xs text-slate-600 text-center py-2">
-                Execute pipeline to see outputs
+                {t('files.outputsEmpty')}
               </p>
             ) : (
               <div className="space-y-0.5">

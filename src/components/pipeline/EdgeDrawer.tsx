@@ -1,10 +1,12 @@
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 
 export default function EdgeDrawer() {
   const selectedEdgeId = useAppStore((s) => s.selectedEdgeId);
   const currentDesign = useAppStore((s) => s.currentDesign);
   const setSelectedEdgeId = useAppStore((s) => s.setSelectedEdgeId);
   const removeEdge = useAppStore((s) => s.removeEdge);
+  const t = useT();
 
   if (!selectedEdgeId || !currentDesign) return null;
 
@@ -15,6 +17,7 @@ export default function EdgeDrawer() {
   const targetNode = currentDesign.topology.nodes.find((n) => n.id === edge.target);
 
   const handleDelete = () => {
+    if (!window.confirm(t('edge.confirmDelete'))) return;
     removeEdge(edge.id);
     setSelectedEdgeId(null);
   };
@@ -33,7 +36,7 @@ export default function EdgeDrawer() {
       <div className="relative ml-auto w-[360px] bg-slate-800 border-l border-slate-700 h-full overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
-          <h2 className="text-white font-semibold">🔗 Connection</h2>
+          <h2 className="text-white font-semibold">🔗 {t('edge.title')}</h2>
           <button
             onClick={() => setSelectedEdgeId(null)}
             aria-label="Close"
@@ -46,22 +49,22 @@ export default function EdgeDrawer() {
         <div className="p-4 space-y-5">
           {/* Connection Info */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Connection Details</h3>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('edge.details')}</h3>
             <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">From:</span>
+                <span className="text-slate-400">{t('edge.from')}:</span>
                 <span className="text-blue-400 font-medium">{sourceNode?.name || edge.source}</span>
               </div>
               <div className="flex items-center justify-center text-slate-500">
                 <span>↓</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">To:</span>
+                <span className="text-slate-400">{t('edge.to')}:</span>
                 <span className="text-green-400 font-medium">{targetNode?.name || edge.target}</span>
               </div>
               {edge.label && (
                 <div className="flex items-center gap-2 text-sm pt-1 border-t border-slate-700">
-                  <span className="text-slate-400">Label:</span>
+                  <span className="text-slate-400">{t('edge.label')}:</span>
                   <span className="text-purple-400">{edge.label}</span>
                 </div>
               )}
@@ -70,15 +73,15 @@ export default function EdgeDrawer() {
 
           {/* Actions */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Actions</h3>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('edge.actions')}</h3>
             <button
               onClick={handleDelete}
               className="w-full py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
             >
-              🗑️ Delete Connection
+              {t('edge.delete')}
             </button>
             <p className="text-xs text-slate-500 mt-2">
-              Tip: You can also select a connection and press Delete or Backspace to remove it.
+              {t('edge.tip')}
             </p>
           </section>
         </div>

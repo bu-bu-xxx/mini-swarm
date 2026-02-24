@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
+import { useT, type Language } from '../../i18n';
 import { AVAILABLE_MODELS, testOpenRouterApiKey } from '../../core/llm/openrouter';
 import { mcpManager } from '../../core/mcp/client';
 import type { MCPServerConfig } from '../../types';
@@ -19,7 +20,10 @@ export default function SetupPage() {
     updateMCPServer,
     setSetupComplete,
     setView,
+    language,
+    setLanguage,
   } = useAppStore();
+  const t = useT();
   const [mcpName, setMcpName] = useState('');
   const [mcpUrl, setMcpUrl] = useState('');
   const [mcpToken, setMcpToken] = useState('');
@@ -63,8 +67,8 @@ export default function SetupPage() {
   };
 
   const savedModels = useMemo(() => ([
-    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter • ${m.name}`, builtIn: true })),
-    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter • ${id}`, builtIn: false })),
+    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter · ${m.name}`, builtIn: true })),
+    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter · ${id}`, builtIn: false })),
   ]), [providerSettings.customModels]);
 
   const handleAddCustomModel = () => {
@@ -94,14 +98,29 @@ export default function SetupPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 max-w-lg w-full border border-slate-700">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">🐝 MiniSwarm Designer</h1>
-          <p className="text-slate-400">Automated Agent Swarm Design & Visualization</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('setup.title')}</h1>
+          <p className="text-slate-400">{t('setup.subtitle')}</p>
+        </div>
+
+        {/* Language Selector */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            {t('settings.language')}
+          </label>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
         </div>
 
         {/* Provider & API Key */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            1. Choose Provider
+            {t('setup.chooseProvider')}
           </label>
           <select
             value={activeProvider}
@@ -124,18 +143,18 @@ export default function SetupPage() {
               disabled={!providerSettings.apiKey.trim() || providerSettings.testStatus === 'testing'}
               className="px-3 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
             >
-              {providerSettings.testStatus === 'testing' ? 'Testing…' : 'Test'}
+              {providerSettings.testStatus === 'testing' ? t('settings.testing') : t('setup.test')}
             </button>
           </div>
           <div className="flex items-center gap-2 text-xs mt-2">
             {providerSettings.testStatus === 'success' && (
-              <span className="text-green-400">{providerSettings.testMessage || 'Connected to OpenRouter'}</span>
+              <span className="text-green-400">{providerSettings.testMessage || t('settings.connected')}</span>
             )}
             {providerSettings.testStatus === 'error' && (
-              <span className="text-red-400">{providerSettings.testMessage || 'Connection failed'}</span>
+              <span className="text-red-400">{providerSettings.testMessage || t('settings.connectionFailed')}</span>
             )}
             {providerSettings.testStatus === 'idle' && providerSettings.apiKey && (
-              <span className="text-slate-400">Enter key and test connection</span>
+              <span className="text-slate-400">{t('settings.testHint')}</span>
             )}
           </div>
           <a
@@ -144,14 +163,14 @@ export default function SetupPage() {
             rel="noopener noreferrer"
             className="text-xs text-purple-400 hover:text-purple-300 mt-1 inline-block"
           >
-            How to get an API key →
+            {t('setup.getApiKey')}
           </a>
         </div>
 
         {/* Model Selection */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            2. Select OpenRouter Model
+            {t('setup.selectModel')}
           </label>
           <select
             value={providerSettings.selectedModel}
@@ -167,7 +186,7 @@ export default function SetupPage() {
               type="text"
               value={customModelName}
               onChange={(e) => setCustomModelName(e.target.value)}
-              placeholder="Add custom model (vendor/model)"
+              placeholder={t('settings.addCustomModel')}
               className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <button
@@ -175,12 +194,12 @@ export default function SetupPage() {
               disabled={!customModelName.trim()}
               className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
             >
-              Add
+              {t('graph.add')}
             </button>
           </div>
           {providerSettings.customModels.length > 0 && (
             <div className="mt-3 space-y-1">
-              <div className="text-xs text-slate-400">Custom models</div>
+              <div className="text-xs text-slate-400">{t('settings.customModels')}</div>
               {providerSettings.customModels.map((model) => (
                 <div key={model} className="flex items-center justify-between bg-slate-700/60 px-3 py-2 rounded-lg text-sm">
                   <span className="text-white">{model}</span>
@@ -188,7 +207,7 @@ export default function SetupPage() {
                     onClick={() => removeCustomModel(model)}
                     className="text-red-400 hover:text-red-300 text-xs"
                   >
-                    Remove
+                    {t('settings.remove')}
                   </button>
                 </div>
               ))}
@@ -204,28 +223,28 @@ export default function SetupPage() {
         {/* Step 2: MCP Servers (optional) */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-300 mb-2">
-            3. Add MCP Servers (Optional)
+            {t('setup.addMCP')}
           </label>
           <div className="space-y-2">
             <input
               type="text"
               value={mcpName}
               onChange={(e) => setMcpName(e.target.value)}
-              placeholder="Server name"
+              placeholder={t('settings.serverName')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <input
               type="url"
               value={mcpUrl}
               onChange={(e) => setMcpUrl(e.target.value)}
-              placeholder="Server URL (e.g. https://mcp.example.com)"
+              placeholder={t('settings.serverUrl')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <input
               type="password"
               value={mcpToken}
               onChange={(e) => setMcpToken(e.target.value)}
-              placeholder="Auth token (optional)"
+              placeholder={t('settings.authToken')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <button
@@ -233,7 +252,7 @@ export default function SetupPage() {
               disabled={!mcpName.trim() || !mcpUrl.trim() || connecting}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
             >
-              {connecting ? 'Connecting...' : 'Add Server'}
+              {connecting ? t('settings.connecting') : t('settings.addServer')}
             </button>
           </div>
 
@@ -249,7 +268,7 @@ export default function SetupPage() {
                     onClick={() => removeMCPServer(s.id)}
                     className="text-red-400 hover:text-red-300 text-sm"
                   >
-                    Remove
+                    {t('settings.remove')}
                   </button>
                 </div>
               ))}
@@ -263,7 +282,7 @@ export default function SetupPage() {
           disabled={!providerSettings.apiKey.trim()}
           className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-medium text-lg transition"
         >
-          Enter Workspace →
+          {t('setup.enterWorkspace')}
         </button>
       </div>
     </div>

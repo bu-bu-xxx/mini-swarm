@@ -36,12 +36,14 @@ function AgentNode({ data }: NodeProps) {
     failed: 'bg-red-600 text-red-100',
   };
 
+  const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+
   return (
     <div
       className={cn(
         'px-4 py-3 rounded-xl border-2 min-w-[180px] transition-all duration-300',
         statusColors[status] || statusColors.idle,
-        status === 'running' && 'animate-pulse'
+        status === 'running' && 'agent-node-running'
       )}
     >
       <Handle type="target" position={Position.Top} className="!bg-purple-500 !w-3 !h-3" />
@@ -53,7 +55,7 @@ function AgentNode({ data }: NodeProps) {
 
       <div className="flex items-center justify-between">
         <span className={cn('text-xs px-2 py-0.5 rounded-full', statusBadge[status] || statusBadge.idle)}>
-          {status}
+          {capitalizedStatus}
         </span>
         <span className="text-xs text-slate-400">🔧 {toolCount}</span>
       </div>

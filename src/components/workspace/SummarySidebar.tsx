@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { opfsService } from '../../core/storage/opfs';
 import { DEFAULT_SUMMARY_SYSTEM_PROMPT } from '../../core/summary/summary';
 import PromptEditorModal from '../common/PromptEditorModal';
@@ -11,6 +12,7 @@ export default function SummarySidebar() {
   const summarySystemPrompt = useAppStore((s) => s.summarySystemPrompt);
   const setSummarySystemPrompt = useAppStore((s) => s.setSummarySystemPrompt);
   const setPreviewFile = useAppStore((s) => s.setPreviewFile);
+  const t = useT();
 
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,21 +88,21 @@ export default function SummarySidebar() {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 shrink-0">
         <h3 className="text-xs font-semibold text-slate-400 uppercase">
-          📋 Summary ({summaryEntries.length})
+          📋 {t('summary.title')} ({summaryEntries.length})
         </h3>
         <button
           onClick={() => setShowPromptEditor(true)}
-          className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+          className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
           title="View/edit summary system prompt"
         >
-          📝 Prompt
+          📝 {t('summary.prompt')}
         </button>
       </div>
 
       {/* Summary entries */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 pb-2">
         {summaryEntries.length === 0 ? (
-          <p className="text-xs text-slate-600">Real-time summaries will appear here once the pipeline runs</p>
+          <p className="text-xs text-slate-600">{t('summary.empty')}</p>
         ) : (
           <div className="space-y-2">
             {summaryEntries.map((entry) => (

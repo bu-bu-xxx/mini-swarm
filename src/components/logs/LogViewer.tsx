@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { formatTimestamp, cn } from '../../utils';
 
 export default function LogViewer() {
   const logs = useAppStore((s) => s.logs);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -22,14 +24,14 @@ export default function LogViewer() {
   return (
     <div className="flex flex-col h-full">
       <h3 className="text-sm font-semibold text-slate-400 uppercase px-3 py-2 border-b border-slate-700 shrink-0">
-        Logs ({logs.length})
+        {t('logs.title')} ({logs.length})
       </h3>
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-0.5"
       >
         {logs.length === 0 ? (
-          <p className="text-slate-500 text-center mt-4">No logs yet</p>
+          <p className="text-slate-500 text-center mt-4">{t('logs.empty')}</p>
         ) : (
           logs.map((log, i) => (
             <div key={i} className="flex gap-1.5 leading-5">

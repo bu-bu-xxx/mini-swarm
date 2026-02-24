@@ -22,8 +22,13 @@ import type {
 } from '../types';
 import type { FileEntry } from '../core/storage/opfs';
 import { opfsService } from '../core/storage/opfs';
+import type { Language } from '../i18n';
 
 interface AppState {
+  // Language
+  language: Language;
+  setLanguage: (lang: Language) => void;
+
   // View
   view: AppView;
   setView: (view: AppView) => void;
@@ -130,6 +135,20 @@ const DEFAULT_AGENT_DEFAULTS: AgentDefaults = {
   maxIterations: 10,
 };
 
+const loadLanguage = (): Language => {
+  try {
+    const stored = localStorage.getItem('autoswarm_language');
+    if (stored === 'en' || stored === 'zh') return stored;
+  } catch { /* ignore */ }
+  return 'en';
+};
+
+const saveLanguage = (lang: Language) => {
+  try {
+    localStorage.setItem('autoswarm_language', lang);
+  } catch { /* ignore */ }
+};
+
 const loadSettings = (): AppSettings => {
   try {
     const stored = localStorage.getItem('autoswarm_settings');
@@ -199,6 +218,10 @@ function rebuildOutputMappings(nodes: AgentNode[], edges: PipelineEdge[], nodeId
 
 export const useAppStore = create<AppState>()(
   immer((set) => ({
+    // Language
+    language: loadLanguage(),
+    setLanguage: (lang) => set((s) => { s.language = lang; saveLanguage(lang); }),
+
     // View
     view: loadSettings().setupComplete ? 'workspace' : 'setup',
     setView: (view) => set((s) => { s.view = view; }),
