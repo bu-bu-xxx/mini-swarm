@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { cn } from '../../utils';
 
 const BUILT_IN_TOOLS = [
@@ -26,6 +27,7 @@ export default function AgentDrawer() {
   const [nameDraft, setNameDraft] = useState('');
   const [showAddTool, setShowAddTool] = useState(false);
   const [customToolName, setCustomToolName] = useState('');
+  const t = useT();
 
   // Local string buffers for per-agent parameter inputs (allows typing "-" without resetting)
   const [agTempStr, setAgTempStr] = useState('');
@@ -71,6 +73,7 @@ export default function AgentDrawer() {
   };
 
   const handleDelete = () => {
+    if (!window.confirm(t('agent.confirmDelete'))) return;
     removeAgent(node.id);
   };
 
@@ -124,7 +127,7 @@ export default function AgentDrawer() {
                 onClick={handleStartEditName}
                 title="Click to edit name"
               >
-                Agent: {node.name} ✏️
+                {t('agent.title')}: {node.name} ✏️
               </h2>
             )}
             <span className="text-xs text-slate-400">{node.role}</span>
@@ -150,7 +153,7 @@ export default function AgentDrawer() {
           {/* Status */}
           {state && (
             <section>
-              <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Status</h3>
+              <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('agent.status')}</h3>
               <span className={cn(
                 'text-xs px-2 py-1 rounded-full',
                 state.status === 'idle' && 'bg-slate-600 text-slate-300',
@@ -158,7 +161,7 @@ export default function AgentDrawer() {
                 state.status === 'completed' && 'bg-green-600 text-green-100',
                 state.status === 'failed' && 'bg-red-600 text-red-100',
               )}>
-                {state.status}
+                {t(`status.${state.status}` as const)}
               </span>
               {state.error && (
                 <div className="mt-2 p-2 bg-red-900/30 border border-red-800 rounded text-xs text-red-300">
@@ -171,13 +174,13 @@ export default function AgentDrawer() {
           {/* Skill / System Prompt */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-slate-400 uppercase">Skill (System Prompt)</h3>
+              <h3 className="text-xs font-medium text-slate-400 uppercase">{t('agent.skill')}</h3>
               {!editingSkill ? (
                 <button
                   onClick={handleStartEditSkill}
                   className="text-xs text-purple-400 hover:text-purple-300 transition"
                 >
-                  ✏️ Edit
+                  ✏️ {t('agent.edit')}
                 </button>
               ) : (
                 <div className="flex gap-1">
@@ -185,7 +188,7 @@ export default function AgentDrawer() {
                     onClick={handleSaveSkill}
                     className="text-xs text-green-400 hover:text-green-300 transition"
                   >
-                    ✓ Save
+                    ✓ {t('agent.save')}
                   </button>
                   <button
                     onClick={() => setEditingSkill(false)}
@@ -218,13 +221,13 @@ export default function AgentDrawer() {
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-slate-400 uppercase">
-                Available Tools ({node.tools.length})
+                {t('agent.tools')} ({node.tools.length})
               </h3>
               <button
                 onClick={() => setShowAddTool(!showAddTool)}
                 className="text-xs text-purple-400 hover:text-purple-300 transition"
               >
-                ➕ Add
+                ➕ {t('agent.addTool')}
               </button>
             </div>
             {showAddTool && (
@@ -247,7 +250,7 @@ export default function AgentDrawer() {
                     type="text"
                     value={customToolName}
                     onChange={(e) => setCustomToolName(e.target.value)}
-                    placeholder="Custom tool name..."
+                    placeholder={t('agent.customTool')}
                     className="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                     onKeyDown={(e) => { if (e.key === 'Enter' && customToolName.trim()) handleAddTool(customToolName.trim()); }}
                   />
@@ -262,14 +265,14 @@ export default function AgentDrawer() {
               </div>
             )}
             <div className="space-y-1">
-              {node.tools.map((t) => (
-                <div key={t} className="flex items-center gap-2 text-xs group">
+              {node.tools.map((toolName) => (
+                <div key={toolName} className="flex items-center gap-2 text-xs group">
                   <span className="text-purple-400">🔧</span>
-                  <span className="text-slate-300 flex-1">{t}</span>
+                  <span className="text-slate-300 flex-1">{toolName}</span>
                   <button
-                    onClick={() => handleRemoveTool(t)}
+                    onClick={() => handleRemoveTool(toolName)}
                     className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"
-                    title="Remove tool"
+                    title={t('agent.removeTool')}
                   >
                     ✕
                   </button>
@@ -280,10 +283,10 @@ export default function AgentDrawer() {
 
           {/* Parameters */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Parameters</h3>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('agent.parameters')}</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 w-24">Temperature</label>
+                <label className="text-xs text-slate-400 w-24">{t('agent.temperature')}</label>
                 <input
                   type="number"
                   min="-1"
@@ -297,7 +300,7 @@ export default function AgentDrawer() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 w-24">Max Tokens</label>
+                <label className="text-xs text-slate-400 w-24">{t('agent.maxTokens')}</label>
                 <input
                   type="number"
                   min="-1"
@@ -311,7 +314,7 @@ export default function AgentDrawer() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 w-24">Max Iterations</label>
+                <label className="text-xs text-slate-400 w-24">{t('agent.maxIterations')}</label>
                 <input
                   type="number"
                   min="1"
@@ -324,15 +327,15 @@ export default function AgentDrawer() {
                   className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
-              <p className="text-xs text-slate-500">Leave empty to use global defaults. Set -1 to omit from API request.</p>
+              <p className="text-xs text-slate-500">{t('agent.paramHint')}</p>
             </div>
           </section>
 
           {/* Input Mappings */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Input Mappings</h3>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('agent.inputMappings')}</h3>
             {node.inputMappings.length === 0 ? (
-              <p className="text-xs text-slate-500">No inputs (root node)</p>
+              <p className="text-xs text-slate-500">{t('agent.noInputs')}</p>
             ) : (
               <div className="space-y-1">
                 {node.inputMappings.map((m, i) => (
@@ -346,7 +349,7 @@ export default function AgentDrawer() {
 
           {/* Output Mappings */}
           <section>
-            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Output Mappings</h3>
+            <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('agent.outputMappings')}</h3>
             <div className="space-y-1">
               {node.outputMappings.map((m, i) => (
                 <div key={i} className="text-xs text-slate-300">
@@ -359,7 +362,7 @@ export default function AgentDrawer() {
           {/* Output (if available) */}
           {nodeContext && (
             <section>
-              <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">Output</h3>
+              <h3 className="text-xs font-medium text-slate-400 uppercase mb-2">{t('agent.output')}</h3>
               <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 max-h-64 overflow-y-auto whitespace-pre-wrap font-mono">
                 {typeof nodeContext.value === 'string'
                   ? nodeContext.value

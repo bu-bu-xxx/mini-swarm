@@ -20,3 +20,13 @@ body {
 .react-flow .selected-edge {
   animation: edge-glow 1.5s ease-in-out infinite;
 }
+
+/* Agent node running glow */
+@keyframes node-glow {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 16px 4px rgba(59, 130, 246, 0.5); }
+}
+
+.agent-node-running {
+  animation: node-glow 2s ease-in-out infinite;
+}

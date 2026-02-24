@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppStore } from '../../store';
+import { useT, type Language } from '../../i18n';
 import { AVAILABLE_MODELS, testOpenRouterApiKey } from '../../core/llm/openrouter';
 import { mcpManager } from '../../core/mcp/client';
 import type { MCPServerConfig } from '../../types';
@@ -20,7 +21,10 @@ export default function SettingsDrawer() {
     removeMCPServer,
     updateMCPServer,
     setAgentDefaults,
+    language,
+    setLanguage,
   } = useAppStore();
+  const t = useT();
   const [mcpName, setMcpName] = useState('');
   const [mcpUrl, setMcpUrl] = useState('');
   const [mcpToken, setMcpToken] = useState('');
@@ -51,8 +55,8 @@ export default function SettingsDrawer() {
   };
 
   const savedModels = useMemo(() => ([
-    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter • ${m.name}`, builtIn: true })),
-    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter • ${id}`, builtIn: false })),
+    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter · ${m.name}`, builtIn: true })),
+    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter · ${id}`, builtIn: false })),
   ]), [providerSettings.customModels]);
 
   if (!settingsOpen) return null;
@@ -114,7 +118,7 @@ export default function SettingsDrawer() {
       {/* Drawer */}
       <div className="relative ml-auto w-96 bg-slate-800 border-l border-slate-700 h-full overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-white">Settings</h2>
+          <h2 className="text-lg font-semibold text-white">{t('settings.title')}</h2>
           <button
             onClick={() => setSettingsOpen(false)}
             className="text-slate-400 hover:text-white text-xl"
@@ -123,12 +127,25 @@ export default function SettingsDrawer() {
           </button>
         </div>
 
+        {/* Language */}
+        <section className="mb-6">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">{t('settings.language')}</h3>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
+        </section>
+
         {/* LLM Configuration */}
         <section className="mb-6">
-          <h3 className="text-sm font-medium text-slate-300 mb-3">LLM Configuration</h3>
+          <h3 className="text-sm font-medium text-slate-300 mb-3">{t('settings.llmConfig')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Provider</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.provider')}</label>
               <select
                 value={activeProvider}
                 onChange={(e) => setActiveProvider(e.target.value as typeof activeProvider)}
@@ -138,7 +155,7 @@ export default function SettingsDrawer() {
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">OpenRouter API Key</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.apiKey')}</label>
               <input
                 type="password"
                 value={providerSettings.apiKey}
@@ -152,22 +169,22 @@ export default function SettingsDrawer() {
                 disabled={!providerSettings.apiKey.trim() || providerSettings.testStatus === 'testing'}
                 className="w-full mb-2 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
               >
-                {providerSettings.testStatus === 'testing' ? 'Testing connection…' : 'Test Connection'}
+                {providerSettings.testStatus === 'testing' ? t('settings.testing') : t('settings.testConnection')}
               </button>
               <div className="text-xs mb-2">
                 {providerSettings.testStatus === 'success' && (
-                  <span className="text-green-400">{providerSettings.testMessage || 'Connected to OpenRouter'}</span>
+                  <span className="text-green-400">{providerSettings.testMessage || t('settings.connected')}</span>
                 )}
                 {providerSettings.testStatus === 'error' && (
-                  <span className="text-red-400">{providerSettings.testMessage || 'Connection failed'}</span>
+                  <span className="text-red-400">{providerSettings.testMessage || t('settings.connectionFailed')}</span>
                 )}
                 {providerSettings.testStatus === 'idle' && providerSettings.apiKey && (
-                  <span className="text-slate-400">Enter key and test connection</span>
+                  <span className="text-slate-400">{t('settings.testHint')}</span>
                 )}
               </div>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Model (OpenRouter)</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.model')}</label>
               <select
                 value={providerSettings.selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
@@ -182,7 +199,7 @@ export default function SettingsDrawer() {
                   type="text"
                   value={customModelName}
                   onChange={(e) => setCustomModelName(e.target.value)}
-                  placeholder="Add custom model (vendor/model)"
+                  placeholder={t('settings.addCustomModel')}
                   className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <button
@@ -190,12 +207,12 @@ export default function SettingsDrawer() {
                   disabled={!customModelName.trim()}
                   className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
                 >
-                  Add
+                  {t('graph.add')}
                 </button>
               </div>
               {providerSettings.customModels.length > 0 && (
                 <div className="mt-2 space-y-1">
-                  <div className="text-xs text-slate-400">Custom models</div>
+                  <div className="text-xs text-slate-400">{t('settings.customModels')}</div>
                   {providerSettings.customModels.map((model) => (
                     <div key={model} className="flex items-center justify-between bg-slate-700/60 px-3 py-2 rounded-lg text-sm">
                       <span className="text-white">{model}</span>
@@ -203,7 +220,7 @@ export default function SettingsDrawer() {
                         onClick={() => removeCustomModel(model)}
                         className="text-red-400 hover:text-red-300 text-xs"
                       >
-                        Remove
+                        {t('settings.remove')}
                       </button>
                     </div>
                   ))}
@@ -220,10 +237,10 @@ export default function SettingsDrawer() {
 
         {/* Agent Defaults */}
         <section className="mb-6">
-          <h3 className="text-sm font-medium text-slate-300 mb-3">Agent Defaults</h3>
+          <h3 className="text-sm font-medium text-slate-300 mb-3">{t('settings.agentDefaults')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Temperature (0-2, or -1 to omit)</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.tempLabel')}</label>
               <input
                 type="number"
                 min="-1"
@@ -236,7 +253,7 @@ export default function SettingsDrawer() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Max Tokens (-1 to omit)</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.maxTokensLabel')}</label>
               <input
                 type="number"
                 min="-1"
@@ -249,7 +266,7 @@ export default function SettingsDrawer() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Max Iterations (ReAct loop limit)</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t('settings.maxIterLabel')}</label>
               <input
                 type="number"
                 min="1"
@@ -261,13 +278,13 @@ export default function SettingsDrawer() {
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            <p className="text-xs text-slate-500">Set -1 to omit the parameter from the API request (use provider defaults).</p>
+            <p className="text-xs text-slate-500">{t('settings.paramHint')}</p>
           </div>
         </section>
 
         {/* MCP Servers */}
         <section className="mb-6">
-          <h3 className="text-sm font-medium text-slate-300 mb-3">MCP Servers</h3>
+          <h3 className="text-sm font-medium text-slate-300 mb-3">{t('settings.mcpServers')}</h3>
 
           {settings.mcpServers.length > 0 && (
             <div className="space-y-2 mb-4">
@@ -277,14 +294,14 @@ export default function SettingsDrawer() {
                     <div>
                       <span className="text-white text-sm">{s.name}</span>
                       <span className={`ml-2 text-xs ${s.connected ? 'text-green-400' : 'text-slate-500'}`}>
-                        {s.connected ? '● Connected' : '○ Disconnected'}
+                        {s.connected ? `● ${t('status.connected')}` : `○ ${t('status.disconnected')}`}
                       </span>
                     </div>
                     <button
                       onClick={() => removeMCPServer(s.id)}
                       className="text-red-400 hover:text-red-300 text-xs"
                     >
-                      Remove
+                      {t('settings.remove')}
                     </button>
                   </div>
                   <span className="text-slate-400 text-xs">{s.url}</span>
@@ -298,21 +315,21 @@ export default function SettingsDrawer() {
               type="text"
               value={mcpName}
               onChange={(e) => setMcpName(e.target.value)}
-              placeholder="Server name"
+              placeholder={t('settings.serverName')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <input
               type="url"
               value={mcpUrl}
               onChange={(e) => setMcpUrl(e.target.value)}
-              placeholder="Server URL (e.g. https://mcp.example.com)"
+              placeholder={t('settings.serverUrl')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <input
               type="password"
               value={mcpToken}
               onChange={(e) => setMcpToken(e.target.value)}
-              placeholder="Auth token (optional)"
+              placeholder={t('settings.authToken')}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <button
@@ -320,7 +337,7 @@ export default function SettingsDrawer() {
               disabled={!mcpName.trim() || !mcpUrl.trim() || connecting}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm transition"
             >
-              {connecting ? 'Connecting...' : 'Add Server'}
+              {connecting ? t('settings.connecting') : t('settings.addServer')}
             </button>
           </div>
         </section>

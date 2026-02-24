@@ -1,14 +1,16 @@
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { cn } from '../../utils';
 
 export default function TodoList() {
   const currentDesign = useAppStore((s) => s.currentDesign);
+  const t = useT();
 
   if (!currentDesign) {
     return (
       <div className="p-3">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">Todo List</h3>
-        <p className="text-xs text-slate-500">No tasks yet. Design a swarm to see the todo list.</p>
+        <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">{t('todo.title')}</h3>
+        <p className="text-xs text-slate-500">{t('todo.empty')}</p>
       </div>
     );
   }
@@ -20,10 +22,16 @@ export default function TodoList() {
     failed: '❌',
   };
 
+  // Build id-to-name map for agent name resolution
+  const idToName: Record<string, string> = {};
+  for (const node of currentDesign.topology.nodes) {
+    idToName[node.id] = node.name;
+  }
+
   return (
     <div className="p-3">
       <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">
-        Todo List ({currentDesign.todos.length})
+        {t('todo.title')} ({currentDesign.todos.length})
       </h3>
       <div className="space-y-1.5 max-h-48 overflow-y-auto">
         {currentDesign.todos.map((todo) => (
@@ -43,7 +51,7 @@ export default function TodoList() {
             </div>
             {todo.assignedNodeIds.length > 0 && (
               <div className="mt-1 ml-6 text-slate-500">
-                Agents: {todo.assignedNodeIds.join(', ')}
+                {t('todo.agents')}: {todo.assignedNodeIds.map((id) => idToName[id] || id).join(', ')}
               </div>
             )}
           </div>

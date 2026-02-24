@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { designSwarm, refineSwarm, DEFAULT_DESIGN_SYSTEM_PROMPT, DEFAULT_REFINE_SYSTEM_PROMPT } from '../../core/designer/designer';
 import { mcpManager } from '../../core/mcp/client';
 import { AVAILABLE_MODELS } from '../../core/llm/openrouter';
@@ -28,6 +29,7 @@ export default function TaskInput() {
     refineSystemPrompt,
     setRefineSystemPrompt,
   } = useAppStore();
+  const t = useT();
 
   const activeProvider = settings.activeProvider;
   const providerSettings = settings.providers[activeProvider] || {
@@ -39,8 +41,8 @@ export default function TaskInput() {
   };
 
   const savedModels = useMemo(() => ([
-    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter • ${m.name}` })),
-    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter • ${id}` })),
+    ...AVAILABLE_MODELS.map((m) => ({ id: m.id, name: `OpenRouter · ${m.name}` })),
+    ...providerSettings.customModels.map((id) => ({ id, name: `OpenRouter · ${id}` })),
   ]), [providerSettings.customModels]);
 
   const handleDesign = useCallback(async () => {
@@ -100,23 +102,26 @@ export default function TaskInput() {
     }
   }, [refinePrompt, providerSettings.apiKey, providerSettings.selectedModel, currentDesign, refineSystemPrompt, setIsDesigning, setDesignProgress, setCurrentDesign, initNodeStates]);
 
+  const designDisabled = !task.trim() || !providerSettings.apiKey || isDesigning;
+  const designTitle = !task.trim() ? t('task.disabledNoTask') : !providerSettings.apiKey ? t('task.disabledNoKey') : undefined;
+
   return (
     <div className="p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase">Task</h3>
+        <h3 className="text-sm font-semibold text-slate-400 uppercase">{t('task.title')}</h3>
         <button
           onClick={() => setShowDesignPrompt(true)}
-          className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+          className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
           title="View/edit design system prompt"
         >
-          📝 Prompt
+          📝 {t('task.prompt')}
         </button>
       </div>
 
       <textarea
         value={task}
         onChange={(e) => setTask(e.target.value)}
-        placeholder="Describe your task... e.g., 'Research AI frameworks and write a comparison report'"
+        placeholder={t('task.placeholder')}
         className="w-full h-24 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
         disabled={isDesigning}
       />
@@ -125,7 +130,7 @@ export default function TaskInput() {
         <select
           value={providerSettings.selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          className="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="flex-1 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
           disabled={isDesigning}
         >
           {savedModels.map((m) => (
@@ -136,29 +141,30 @@ export default function TaskInput() {
 
       <button
         onClick={handleDesign}
-        disabled={!task.trim() || !providerSettings.apiKey || isDesigning}
+        disabled={designDisabled}
+        title={designTitle}
         className="w-full py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
       >
-        {isDesigning ? '🔄 Designing...' : '🐝 Design Swarm'}
+        {isDesigning ? t('task.designing') : t('task.designButton')}
       </button>
 
       {/* Refine Pipeline Section */}
       {currentDesign && !isDesigning && (
         <div className="pt-2 border-t border-slate-700 space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase">Refine Pipeline</h3>
+            <h3 className="text-sm font-semibold text-slate-400 uppercase">{t('task.refineTitle')}</h3>
             <button
               onClick={() => setShowRefinePrompt(true)}
-              className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded transition"
+              className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
               title="View/edit refine system prompt"
             >
-              📝 Prompt
+              📝 {t('task.prompt')}
             </button>
           </div>
           <textarea
             value={refinePrompt}
             onChange={(e) => setRefinePrompt(e.target.value)}
-            placeholder="Describe changes... e.g., 'Add a testing agent' or 'Remove the reviewer and merge its tasks with the coder'"
+            placeholder={t('task.refinePlaceholder')}
             className="w-full h-16 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
             disabled={isDesigning}
           />
@@ -167,7 +173,7 @@ export default function TaskInput() {
             disabled={!refinePrompt.trim() || !providerSettings.apiKey || isDesigning}
             className="w-full py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition"
           >
-            ✨ Refine Pipeline
+            {t('task.refineButton')}
           </button>
         </div>
       )}

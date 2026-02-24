@@ -1,5 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { useAppStore } from '../../store';
+import { useT } from '../../i18n';
 import { PipelineEngine } from '../../core/engine/pipeline';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,6 +24,7 @@ export default function ExecutionControls() {
     clearSummaryEntries,
     summarySystemPrompt,
   } = useAppStore();
+  const t = useT();
 
   const engineRef = useRef<PipelineEngine | null>(null);
 
@@ -112,7 +114,15 @@ export default function ExecutionControls() {
     }
   }, [setExecutionStatus]);
 
-  const statusColors: Record<string, string> = {
+  const statusColorsDot: Record<string, string> = {
+    idle: 'bg-slate-400',
+    running: 'bg-blue-400',
+    paused: 'bg-yellow-400',
+    completed: 'bg-green-400',
+    failed: 'bg-red-400',
+  };
+
+  const statusColorsText: Record<string, string> = {
     idle: 'text-slate-400',
     running: 'text-blue-400',
     paused: 'text-yellow-400',
@@ -120,13 +130,21 @@ export default function ExecutionControls() {
     failed: 'text-red-400',
   };
 
+  const statusKey = `status.${executionStatus}` as const;
+
+  const hasDesign = !!currentDesign;
+  const hasKey = !!(settings.providers[settings.activeProvider]?.apiKey);
+  const startDisabled = !hasDesign || !hasKey;
+  const startTitle = !hasDesign ? t('execution.disabledNoDesign') : !hasKey ? t('execution.disabledNoKey') : undefined;
+
   return (
     <div className="p-3 border-b border-slate-700">
-      <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">Execution</h3>
+      <h3 className="text-sm font-semibold text-slate-400 uppercase mb-2">{t('execution.title')}</h3>
 
       <div className="flex items-center gap-1.5 mb-2">
-        <span className={`text-xs ${statusColors[executionStatus]}`}>
-          ● {executionStatus.charAt(0).toUpperCase() + executionStatus.slice(1)}
+        <span className={`inline-block w-2 h-2 rounded-full ${statusColorsDot[executionStatus]}`} />
+        <span className={`text-xs ${statusColorsText[executionStatus]}`}>
+          {t(statusKey)}
         </span>
       </div>
 
@@ -134,40 +152,38 @@ export default function ExecutionControls() {
         {executionStatus === 'idle' || executionStatus === 'completed' || executionStatus === 'failed' ? (
           <button
             onClick={handleStart}
-            disabled={
-              !currentDesign ||
-              !(settings.providers[settings.activeProvider]?.apiKey)
-            }
-            className="flex-1 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition"
+            disabled={startDisabled}
+            title={startTitle}
+            className="flex-1 py-1.5 bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-xs font-medium transition"
           >
-            ▶ Start
+            ▶ {t('execution.start')}
           </button>
         ) : null}
 
         {executionStatus === 'running' && (
           <button
             onClick={handlePause}
-            className="flex-1 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-xs font-medium transition"
+            className="flex-1 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-xs font-medium transition"
           >
-            ⏸ Pause
+            ⏸ {t('execution.pause')}
           </button>
         )}
 
         {executionStatus === 'paused' && (
           <button
             onClick={handleResume}
-            className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition"
+            className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition"
           >
-            ▶ Resume
+            ▶ {t('execution.resume')}
           </button>
         )}
 
         {(executionStatus === 'running' || executionStatus === 'paused') && (
           <button
             onClick={handleStop}
-            className="flex-1 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-medium transition"
+            className="flex-1 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-medium transition"
           >
-            ⏹ Stop
+            ⏹ {t('execution.stop')}
           </button>
         )}
       </div>
